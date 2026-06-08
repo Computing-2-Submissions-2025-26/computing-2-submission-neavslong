@@ -13,11 +13,54 @@ import {
     isLost
 } from "./game.js";
 
-let state = createGame();
+const STREAK_KEY = "davesEscapeRandomStreak";
 
+const homeScreenEl = document.getElementById("home-screen");
+const gameScreenEl = document.getElementById("game-screen");
 const boardEl = document.getElementById("board");
 const statusEl = document.getElementById("status");
 const moveCountEl = document.getElementById("move-count");
+const homeStreakEl = document.getElementById("home-streak");
+const gameStreakEl = document.getElementById("game-streak");
+
+let state = createGame();
+let recordedResult = null;
+
+function loadStreak() {
+    try {
+        const stored = Number.parseInt(localStorage.getItem(STREAK_KEY), 10);
+        return Number.isFinite(stored) && stored >= 0 ? stored : 0;
+    } catch (ignore) {
+        return 0;
+    }
+}
+
+let winStreak = loadStreak();
+
+function saveStreak() {
+    try {
+        localStorage.setItem(STREAK_KEY, String(winStreak));
+    } catch (ignore) {
+        // The game still works when storage is unavailable.
+    }
+}
+
+function renderStreak() {
+    homeStreakEl.textContent = winStreak;
+    gameStreakEl.textContent = winStreak;
+}
+
+function recordResult() {
+    if (isWon(state) && recordedResult !== "won") {
+        winStreak += 1;
+        recordedResult = "won";
+        saveStreak();
+    } else if (isLost(state) && recordedResult !== "lost") {
+        winStreak = 0;
+        recordedResult = "lost";
+        saveStreak();
+    }
+}
 
 function render() {
     const {rows, cols} = getBoardSize(state);
@@ -69,9 +112,11 @@ function render() {
     boardEl.replaceChildren(...cells);
 
     moveCountEl.textContent = getMoveCount(state);
+    recordResult();
+    renderStreak();
 
     if (isWon(state)) {
-        statusEl.textContent = "You escaped! Dave wins!";
+        statusEl.textContent = `You escaped! Win streak: ${winStreak}.`;
         statusEl.className = "status won";
     } else if (isLost(state)) {
         statusEl.textContent = "The zombies caught Dave! Game over.";
@@ -83,9 +128,31 @@ function render() {
 }
 
 function handleDirection(dir) {
+    if (gameScreenEl.hidden) { return; }
     state = moveDave(state, dir);
     render();
 }
+
+function startRandomChallenge() {
+    state = resetGame();
+    recordedResult = null;
+    homeScreenEl.hidden = true;
+    gameScreenEl.hidden = false;
+    render();
+}
+
+function showMainMenu() {
+    gameScreenEl.hidden = true;
+    homeScreenEl.hidden = false;
+    renderStreak();
+}
+
+document.getElementById("random-mode").addEventListener(
+    "click",
+    startRandomChallenge
+);
+
+document.getElementById("back-home").addEventListener("click", showMainMenu);
 
 document.querySelectorAll("[data-dir]").forEach(function (btn) {
     btn.addEventListener("click", function () {
@@ -94,8 +161,7 @@ document.querySelectorAll("[data-dir]").forEach(function (btn) {
 });
 
 document.getElementById("reset").addEventListener("click", function () {
-    state = resetGame();
-    render();
+    startRandomChallenge();
 });
 
 const KEY_MAP = {
@@ -113,4 +179,4 @@ document.addEventListener("keydown", function (e) {
     }
 });
 
-render();
+renderStreak();

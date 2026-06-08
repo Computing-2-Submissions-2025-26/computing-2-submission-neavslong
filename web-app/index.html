@@ -9,49 +9,102 @@
 </head>
 <body>
     <main>
-        <h1>Dave's Escape</h1>
+        <header class="site-header">
+            <p class="eyebrow">A turn-based escape puzzle</p>
+            <h1>Dave's Escape</h1>
+        </header>
 
-        <section class="instructions" aria-label="How to play">
-            <p>
-                Guide <strong>Dave (D)</strong> to the <strong>Exit (X)</strong> using the
-                buttons below or <kbd>↑ ↓ ← →</kbd> arrow keys.
-            </p>
-            <p>
-                Zombies <strong>(Z)</strong> move after every step you take.
-                Zombies die when they move into plants <strong>(P)</strong>.
-                Walls <strong>(█)</strong> still block them, and Dave cannot walk
-                through plants or walls.
-                Reach the exit before a zombie gets next to Dave!
-            </p>
+        <section id="home-screen" class="screen home-screen">
+            <div class="hero">
+                <p>Choose a mode. Outsmart the zombies. Get Dave home.</p>
+            </div>
+
+            <div class="mode-grid" aria-label="Game modes">
+                <button class="mode-card random-card" id="random-mode">
+                    <span class="mode-number">01</span>
+                    <span class="mode-title">Random Challenge</span>
+                    <span class="mode-description">
+                        Every board is different. Escape to build your win streak.
+                    </span>
+                    <span class="mode-meta">
+                        Current streak: <strong id="home-streak">0</strong>
+                    </span>
+                </button>
+
+                <a
+                    class="mode-card campaign-card"
+                    href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                    aria-label="Open Campaign Mode"
+                >
+                    <span class="mode-number">02</span>
+                    <span class="mode-title">Campaign Mode</span>
+                    <span class="mode-description">
+                        Difficulty settings and special victory conditions.
+                    </span>
+                    <span class="mode-meta">Enter campaign</span>
+                </a>
+
+                <div class="mode-card locked-card" aria-disabled="true">
+                    <span class="mode-number">03</span>
+                    <span class="mode-title">Coming Soon</span>
+                    <span class="mode-description">
+                        A third way to escape is still under construction.
+                    </span>
+                    <span class="mode-meta">Locked</span>
+                </div>
+            </div>
         </section>
 
-        <p
-            class="status playing"
-            id="status"
-            role="status"
-            aria-live="polite"
-            aria-atomic="true"
-        >Playing – guide Dave to the exit!</p>
-
-        <p class="move-count">Moves: <span id="move-count">0</span></p>
-
-        <div
-            class="board"
-            id="board"
-            role="grid"
-            aria-label="Game board"
-            aria-readonly="true"
-        ></div>
-
-        <nav class="controls" aria-label="Movement controls">
-            <button data-dir="up" aria-label="Move up">↑</button>
-            <div class="controls-row">
-                <button data-dir="left"  aria-label="Move left">←</button>
-                <button data-dir="down"  aria-label="Move down">↓</button>
-                <button data-dir="right" aria-label="Move right">→</button>
+        <section id="game-screen" class="screen game-screen" hidden>
+            <div class="game-toolbar">
+                <button class="text-button" id="back-home">← Main menu</button>
+                <p class="streak-counter">
+                    Win streak <strong id="game-streak">0</strong>
+                </p>
             </div>
-            <button id="reset" aria-label="Reset game">Reset</button>
-        </nav>
+
+            <section class="instructions" aria-label="How to play">
+                <p>
+                    Guide <strong>Dave (D)</strong> to the <strong>Exit (X)</strong>
+                    with the arrow keys or controls.
+                </p>
+                <p>
+                    Zombies die when they move into plants <strong>(P)</strong>.
+                    Walls <strong>(█)</strong> block movement. Dave loses when a
+                    zombie reaches the space directly above, below, left, or right.
+                </p>
+            </section>
+
+            <p
+                class="status playing"
+                id="status"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+            >Playing - guide Dave to the exit!</p>
+
+            <p class="move-count">Moves: <span id="move-count">0</span></p>
+
+            <div
+                class="board"
+                id="board"
+                role="grid"
+                aria-label="Game board"
+                aria-readonly="true"
+            ></div>
+
+            <nav class="controls" aria-label="Movement controls">
+                <button data-dir="up" aria-label="Move up">↑</button>
+                <div class="controls-row">
+                    <button data-dir="left"  aria-label="Move left">←</button>
+                    <button data-dir="down"  aria-label="Move down">↓</button>
+                    <button data-dir="right" aria-label="Move right">→</button>
+                </div>
+                <button id="reset" aria-label="Start a new random challenge">
+                    New challenge
+                </button>
+            </nav>
+        </section>
     </main>
 </body>
 </html>
