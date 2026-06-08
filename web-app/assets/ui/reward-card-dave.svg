@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 340">
+  <defs><radialGradient id="g"><stop stop-color="#fff7a8"/><stop offset="1" stop-color="#e39a28"/></radialGradient></defs>
+  <rect x="10" y="10" width="240" height="320" rx="24" fill="url(#g)" stroke="#4b3018" stroke-width="12"/>
+  <rect x="31" y="35" width="198" height="210" rx="18" fill="#5e9d45" stroke="#4b3018" stroke-width="8"/>
+  <g transform="translate(73 72) scale(1.12)">
+    <path fill="#aeb8bd" stroke="#20251f" stroke-width="5" d="M0 25 8 5h42l7 20-8 8H8z"/>
+    <path fill="#7d898f" stroke="#20251f" stroke-width="5" d="M-5 24h67v10H-5z"/>
+    <circle cx="29" cy="52" r="27" fill="#e4a367" stroke="#20251f" stroke-width="5"/>
+    <circle cx="19" cy="49" r="3"/><circle cx="39" cy="49" r="3"/>
+    <path fill="#7a432b" stroke="#20251f" stroke-width="5" d="M10 62c10-7 28-7 38 0-3 21-10 29-19 29s-16-8-19-29z"/>
+  </g>
+  <text x="130" y="282" text-anchor="middle" font-family="Arial Black" font-size="25" fill="#4b3018">DAVE</text>
+  <path fill="#fff5a5" d="m35 25 8 14 16 2-12 11 3 16-15-8-14 8 3-16-12-11 16-2z"/>
+</svg>

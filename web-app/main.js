@@ -15,6 +15,11 @@ import {
     isWon,
     isLost
 } from "./game.js";
+import {
+    MODE2_DIFFICULTY_CONFIG,
+    getPlantSkin,
+    getZombieAsset
+} from "./mode2-visuals.js";
 
 const STREAK_KEY = "davesEscapeRandomStreak";
 const CHEAT_CODE = [
@@ -33,6 +38,7 @@ const CHEAT_CODE = [
 const homeScreenEl = document.getElementById("home-screen");
 const campaignScreenEl = document.getElementById("campaign-screen");
 const gameScreenEl = document.getElementById("game-screen");
+const mode2SceneEl = document.getElementById("mode2-scene");
 const boardEl = document.getElementById("board");
 const statusEl = document.getElementById("status");
 const statusIconEl = statusEl.querySelector(".status-icon");
@@ -46,6 +52,8 @@ const modeRulesEl = document.getElementById("mode-rules");
 const resetEl = document.getElementById("reset");
 const resetTextEl = document.getElementById("reset-text");
 const campaignTotalMovesEl = document.getElementById("campaign-total-moves");
+const winOverlayEl = document.getElementById("win-overlay");
+const loseOverlayEl = document.getElementById("lose-overlay");
 
 let state = createGame();
 let recordedResult = null;
@@ -110,12 +118,28 @@ function recordResult() {
     }
 }
 
-function makePiece(src, className, alt) {
+function makePiece(src, className, alt, skinClass = "") {
     const piece = document.createElement("img");
     piece.src = src;
     piece.alt = alt;
-    piece.className = `piece ${className}`;
+    piece.className = `piece ${className} ${skinClass}`.trim();
     return piece;
+}
+
+function configureScene() {
+    const isCampaign = currentMode === "campaign";
+    mode2SceneEl.className = "mode2-scene";
+    if (!isCampaign) {
+        mode2SceneEl.style.removeProperty("--scene-background");
+        return;
+    }
+    const difficulty = getDifficulty(state);
+    const config = MODE2_DIFFICULTY_CONFIG[difficulty];
+    mode2SceneEl.classList.add(`difficulty-${difficulty}`);
+    mode2SceneEl.style.setProperty(
+        "--scene-background",
+        `url("${config.background}")`
+    );
 }
 
 function render() {
@@ -125,7 +149,9 @@ function render() {
     const plants = getPlants(state);
     const zombies = getZombies(state);
     const walls = getWalls(state);
+    const isCampaign = currentMode === "campaign";
 
+    configureScene();
     boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
     boardEl.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
 
@@ -138,7 +164,11 @@ function render() {
         if (r === dave.row && c === dave.col) {
             cell.className = "cell dave selected";
             cell.append(makePiece(
-                "assets/dave-token.svg",
+                (
+                    isCampaign
+                    ? "assets/characters/dave-pot.svg"
+                    : "assets/dave-token.svg"
+                ),
                 "piece-dave",
                 "Dave"
             ));
@@ -150,11 +180,18 @@ function render() {
             cell.className = "cell wall";
             cell.setAttribute("aria-label", "Wall");
         } else if (plants.some((p) => p.row === r && p.col === c)) {
+            const plant = plants.find((p) => p.row === r && p.col === c);
+            const plantSkin = getPlantSkin(plant.skinId);
             cell.className = "cell plant";
             cell.append(makePiece(
-                "assets/plant-small.svg",
+                (
+                    isCampaign
+                    ? plantSkin.asset
+                    : "assets/plant-small.svg"
+                ),
                 "piece-plant",
-                "Friendly plant"
+                "Friendly plant",
+                isCampaign ? `skin-plant-${plantSkin.id}` : ""
             ));
             cell.setAttribute("aria-label", `Plant at row ${r} col ${c}`);
         } else if (zombies.some(function (z) {
@@ -171,9 +208,14 @@ function render() {
             cell.className = giant ? "cell giant-zombie" : "cell zombie";
             if (!giant || (r === zombie.row && c === zombie.col)) {
                 cell.append(makePiece(
-                    "assets/zombie-token.svg",
+                    (
+                        isCampaign
+                        ? getZombieAsset(zombie.skinId)
+                        : "assets/zombie-token.svg"
+                    ),
                     "piece-zombie",
-                    giant ? "Giant zombie" : "Zombie"
+                    giant ? "Giant zombie" : "Zombie",
+                    isCampaign ? `skin-zombie-${zombie.skinId}` : ""
                 ));
             }
             cell.setAttribute(
@@ -202,6 +244,10 @@ function render() {
         );
         statusIconEl.textContent = "☀";
         statusEl.className = "status won hud-panel";
+        if (currentMode === "campaign") {
+            winOverlayEl.hidden = false;
+            loseOverlayEl.hidden = true;
+        }
     } else if (isLost(state)) {
         statusTextEl.textContent = (
             currentMode === "campaign"
@@ -210,11 +256,20 @@ function render() {
         );
         statusIconEl.textContent = "🧠";
         statusEl.className = "status lost hud-panel";
+        if (currentMode === "campaign") {
+            loseOverlayEl.hidden = false;
+            winOverlayEl.hidden = true;
+        }
     } else {
         statusTextEl.textContent = "Playing - guide Dave to the exit!";
         statusIconEl.textContent = "🍃";
         statusEl.className = "status playing hud-panel";
     }
+}
+
+function hideMode2Overlays() {
+    winOverlayEl.hidden = true;
+    loseOverlayEl.hidden = true;
 }
 
 function campaignWinMessage() {
@@ -308,6 +363,7 @@ function startRandomChallenge() {
     currentMode = "random";
     cheatCodeIndex = 0;
     state = resetGame();
+    hideMode2Overlays();
     recordedResult = null;
     homeScreenEl.hidden = true;
     campaignScreenEl.hidden = true;
@@ -320,6 +376,7 @@ function startCampaign(difficulty) {
     currentMode = "campaign";
     cheatCodeIndex = 0;
     state = createCampaignGame(difficulty);
+    hideMode2Overlays();
     campaignDifficulty = difficulty;
     recordedResult = null;
     campaignAction = "restart";
@@ -351,6 +408,7 @@ function continueCampaign() {
 
 function showMainMenu() {
     cheatCodeIndex = 0;
+    hideMode2Overlays();
     gameScreenEl.hidden = true;
     campaignScreenEl.hidden = true;
     homeScreenEl.hidden = false;
@@ -376,6 +434,16 @@ document.getElementById("campaign-restart").addEventListener(
     "click",
     startNewCampaign
 );
+
+document.getElementById("win-continue").addEventListener("click", function () {
+    hideMode2Overlays();
+    continueCampaign();
+});
+
+document.getElementById("lose-retry").addEventListener("click", function () {
+    hideMode2Overlays();
+    startCampaign(campaignDifficulty);
+});
 
 document.getElementById("home-title").addEventListener("click", showMainMenu);
 

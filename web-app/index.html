@@ -131,13 +131,15 @@
                 </p>
             </div>
 
-            <div
-                class="board game-board"
-                id="board"
-                role="grid"
-                aria-label="Game board"
-                aria-readonly="true"
-            ></div>
+            <div class="mode2-scene" id="mode2-scene">
+                <div
+                    class="board game-board"
+                    id="board"
+                    role="grid"
+                    aria-label="Game board"
+                    aria-readonly="true"
+                ></div>
+            </div>
 
             <nav class="controls" aria-label="Movement controls">
                 <button class="game-button" data-dir="up" aria-label="Move up">↑</button>
@@ -152,6 +154,35 @@
                     <span id="reset-text">New challenge</span>
                 </button>
             </nav>
+        </section>
+
+        <section class="win-overlay" id="win-overlay" hidden
+            aria-label="Level complete">
+            <div class="sunburst" aria-hidden="true"></div>
+            <img class="reward-card__sparkle sparkle-one"
+                src="assets/ui/sun-sparkle.svg" alt="">
+            <img class="reward-card__sparkle sparkle-two"
+                src="assets/ui/sun-sparkle.svg" alt="">
+            <div class="reward-card reward-card--show">
+                <img class="reward-card__image"
+                    src="assets/ui/reward-card-dave.svg" alt="Dave reward card">
+                <h2 class="reward-card__title">Level Complete!</h2>
+                <p class="reward-card__subtitle">Dave escaped!</p>
+                <button class="game-button" id="win-continue">Continue</button>
+            </div>
+        </section>
+
+        <section class="lose-overlay" id="lose-overlay" hidden
+            aria-label="Campaign lost">
+            <div class="lose-message lose-message--slime">
+                COMPUTING 2<br>ATE YOUR TOKENS!
+            </div>
+            <div class="slime-drops" aria-hidden="true"></div>
+            <div class="lose-actions">
+                <button class="game-button reset-button" id="lose-retry">
+                    Try Again
+                </button>
+            </div>
         </section>
     </main>
 </body>

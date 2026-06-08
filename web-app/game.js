@@ -1,3 +1,8 @@
+import {
+    assignRandomPlantSkins,
+    assignZombieSkins
+} from "./mode2-visuals.js";
+
 /**
  * @module game
  * Dave's Escape – a turn-based rescue puzzle.
@@ -327,9 +332,9 @@ const createCampaignGame = function (difficulty, seed) {
     return Object.assign({}, base, {
         mode: "campaign",
         difficulty: level,
-        plants,
+        plants: assignRandomPlantSkins(plants, rng),
         walls,
-        zombies
+        zombies: assignZombieSkins(zombies, level, rng)
     });
 };
 
@@ -768,7 +773,10 @@ const movePlant = function (state, plantId, direction) {
     const dir = DIRS.find((d) => d.name === direction);
     const newPlants = state.plants.map(function (p) {
         if (p.id !== plantId) { return p; }
-        return {id: p.id, row: p.row + dir.dr, col: p.col + dir.dc};
+        return Object.assign({}, p, {
+            row: p.row + dir.dr,
+            col: p.col + dir.dc
+        });
     });
     const afterMove = Object.assign({}, state, {
         plants: newPlants,
