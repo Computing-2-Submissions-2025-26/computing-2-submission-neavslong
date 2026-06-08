@@ -4,12 +4,14 @@ import {
 } from "./mode2-visuals.js";
 
 /**
+ * Dave's Escape - a turn-based rescue puzzle.
+ *
+ * An 8x8 board is randomly generated each game.
+ * Dave must reach the exit before zombies become adjacent.
+ * Plants destroy zombies that move into them.
+ * Walls are permanent obstacles.
+ *
  * @module game
- * Dave's Escape – a turn-based rescue puzzle.
- * An 8×8 board is randomly generated each game.
- * Dave (D) must reach the Exit (X) before Zombies (Z) become adjacent.
- * Plants (P) destroy zombies that move into them.
- * Walls (█) are permanent obstacles.
  */
 
 /** Direction vectors in AI priority order: up, right, down, left. */
