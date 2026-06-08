@@ -177,7 +177,17 @@ function render() {
             cell.className = "cell exit exit-tile";
             cell.setAttribute("aria-label", `Exit at row ${r} col ${c}`);
         } else if (walls.some((w) => w.row === r && w.col === c)) {
-            cell.className = "cell wall";
+            const cactusWall = isCampaign &&
+                getDifficulty(state) === 5 &&
+                (r + c) % 2 === 0;
+            cell.className = cactusWall ? "cell wall cactus-wall" : "cell wall";
+            if (cactusWall) {
+                cell.append(makePiece(
+                    "assets/characters/plants/cactus-wall.svg",
+                    "piece-cactus",
+                    "Cactus obstacle"
+                ));
+            }
             cell.setAttribute("aria-label", "Wall");
         } else if (plants.some((p) => p.row === r && p.col === c)) {
             const plant = plants.find((p) => p.row === r && p.col === c);
@@ -205,8 +215,17 @@ function render() {
                     c >= z.col && c < z.col + size;
             });
             const giant = (zombie.size || 1) === 2;
-            cell.className = giant ? "cell giant-zombie" : "cell zombie";
-            if (!giant || (r === zombie.row && c === zombie.col)) {
+            const giantAnchor = giant &&
+                r === zombie.row &&
+                c === zombie.col;
+            cell.className = (
+                giant
+                ? `cell giant-zombie ${
+                    giantAnchor ? "giant-anchor" : "giant-body"
+                }`
+                : "cell zombie"
+            );
+            if (!giant || giantAnchor) {
                 cell.append(makePiece(
                     (
                         isCampaign
@@ -225,6 +244,14 @@ function render() {
         } else {
             cell.className = "cell empty";
             cell.setAttribute("aria-label", "Empty");
+        }
+
+        if (isCampaign && getDifficulty(state) === 3 && (r === 3 || r === 4)) {
+            cell.classList.add("pool-cell");
+            if (cell.classList.contains("dave") ||
+                    cell.classList.contains("zombie")) {
+                cell.classList.add("swimming-piece");
+            }
         }
         return cell;
     });
@@ -442,7 +469,7 @@ document.getElementById("win-continue").addEventListener("click", function () {
 
 document.getElementById("lose-retry").addEventListener("click", function () {
     hideMode2Overlays();
-    startCampaign(campaignDifficulty);
+    startNewCampaign();
 });
 
 document.getElementById("home-title").addEventListener("click", showMainMenu);

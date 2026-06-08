@@ -386,11 +386,12 @@ kbd {
 }
 
 .game-board {
+    --board-gap: 4px;
     position: relative;
     width: 100%;
     aspect-ratio: 1;
     display: grid;
-    gap: 4px;
+    gap: var(--board-gap);
     padding: 7px;
     overflow: hidden;
     border: 7px solid var(--pvz-outline);
@@ -460,6 +461,22 @@ kbd {
         linear-gradient(145deg, #75bc4de8, #3f8d3de8);
 }
 
+.difficulty-3 .cell.pool-cell {
+    border-color: #267b96;
+    background:
+        radial-gradient(ellipse at 28% 35%, #d9fbff99 0 3px, transparent 4px),
+        repeating-linear-gradient(
+            -12deg,
+            transparent 0 12px,
+            #b5efff55 13px 16px,
+            transparent 17px 29px
+        ),
+        linear-gradient(145deg, #67d2e7ee, #249abfee);
+    box-shadow:
+        inset 2px 2px 0 #c7f7ff99,
+        inset -2px -2px 0 #16738daa;
+}
+
 .difficulty-4 .cell {
     border-color: #723625;
     background:
@@ -475,6 +492,34 @@ kbd {
         linear-gradient(28deg, transparent 47%, #8b673b33 48% 51%, transparent 52%),
         linear-gradient(145deg, #e1c27fec, #b99254ed);
     box-shadow: inset 2px 2px 0 #f6dfa899, inset -2px -2px 0 #89683daa;
+}
+
+.difficulty-4 .cell.exit {
+    border-color: #512a20;
+    background:
+        repeating-linear-gradient(
+            0deg,
+            #a44d35 0 10px,
+            #783226 11px 14px
+        );
+    box-shadow:
+        inset 0 0 0 3px #d9784e,
+        0 0 15px 3px #ffe45a;
+}
+
+.difficulty-4 .cell.exit::before {
+    width: 64%;
+    height: 78%;
+    border: 4px solid #45261e;
+    border-radius: 4px 4px 0 0;
+    background:
+        linear-gradient(#292b29 0 18%, transparent 19%),
+        repeating-linear-gradient(
+            0deg,
+            #a54e36 0 9px,
+            #713025 10px 13px
+        );
+    box-shadow: -7px -5px 0 #5a3025, 7px -5px 0 #5a3025;
 }
 
 .cell {
@@ -526,6 +571,24 @@ kbd {
     transform: rotate(-8deg);
 }
 
+.cell.cactus-wall {
+    border-color: #5b7433;
+    background:
+        radial-gradient(circle at 80% 20%, #f6e79955 0 2px, transparent 3px),
+        linear-gradient(145deg, #d9bc72, #ac8448);
+}
+
+.cell.cactus-wall::after {
+    display: none;
+}
+
+.piece-cactus {
+    width: 82%;
+    height: 92%;
+    animation: plant-sway 2.7s ease-in-out infinite;
+    transform-origin: 50% 100%;
+}
+
 .cell.exit {
     isolation: isolate;
     border-color: #9b641d;
@@ -555,6 +618,42 @@ kbd {
 .cell.zombie,
 .cell.giant-zombie {
     overflow: visible;
+}
+
+.pool-cell.swimming-piece::after {
+    position: absolute;
+    z-index: 3;
+    right: 10%;
+    bottom: 5%;
+    left: 10%;
+    height: 28%;
+    border: 5px solid #ff9c2f;
+    border-radius: 50%;
+    background: #ffd66755;
+    box-shadow: inset 0 0 0 3px #fff0a3aa;
+    content: "";
+    pointer-events: none;
+}
+
+.pool-cell.swimming-piece::before {
+    position: absolute;
+    z-index: 4;
+    top: 28%;
+    left: 50%;
+    width: 48%;
+    height: 16%;
+    border: 3px solid #173643;
+    border-radius: 999px;
+    background:
+        linear-gradient(
+            90deg,
+            #9eefffcc 0 42%,
+            #173643 43% 56%,
+            #9eefffcc 57%
+        );
+    content: "";
+    pointer-events: none;
+    transform: translateX(-50%);
 }
 
 .cell.plant {
@@ -618,9 +717,26 @@ kbd {
         inset -2px -2px 0 #31402f;
 }
 
-.cell.giant-zombie .piece {
-    width: 105%;
-    height: 105%;
+.cell.giant-zombie.giant-anchor {
+    z-index: 8;
+    overflow: visible;
+}
+
+.cell.giant-zombie.giant-body {
+    opacity: 0.72;
+}
+
+.cell.giant-zombie.giant-anchor .piece {
+    position: absolute;
+    z-index: 10;
+    top: 0;
+    left: 0;
+    width: calc(200% + var(--board-gap));
+    height: calc(200% + var(--board-gap));
+    max-width: none;
+    max-height: none;
+    object-fit: contain;
+    transform-origin: 50% 85%;
 }
 
 .selected {
@@ -1105,6 +1221,7 @@ button.text-button:active {
     }
 
     .game-board {
+        --board-gap: 2px;
         gap: 2px;
         padding: 4px;
         border-width: 5px;
