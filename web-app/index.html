@@ -11,7 +11,9 @@
     <main>
         <header class="site-header">
             <p class="eyebrow">A turn-based escape puzzle</p>
-            <h1>Dave's Escape</h1>
+            <button class="home-title" id="home-title" aria-label="Return to main menu">
+                Dave's Escape
+            </button>
         </header>
 
         <section id="home-screen" class="screen home-screen">
@@ -26,15 +28,6 @@
                     <span class="mode-description">
                         Every board is different. Escape to build your win streak.
                     </span>
-                    <span class="qr-prompt">
-                        <img
-                            src="assets/images/easy-win-qr.png"
-                            alt="QR code for an easy win"
-                            width="88"
-                            height="88"
-                        >
-                        <span>Scan for easy win</span>
-                    </span>
                     <span class="mode-meta">
                         Current streak: <strong id="home-streak">0</strong>
                     </span>
@@ -48,59 +41,47 @@
                     <span class="mode-number">02</span>
                     <span class="mode-title">Campaign Mode</span>
                     <span class="mode-description">
-                        Difficulty settings and special victory conditions.
+                        Clear every difficulty in one continuous run.
                     </span>
-                    <span class="mode-meta">Enter campaign</span>
+                    <span class="mode-meta">Start from difficulty 1</span>
                 </button>
 
                 <a
-                    class="mode-card rick-card"
-                    href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                    class="mode-card info-card"
+                    href="https://web.mit.edu/admissions-aid/"
                     aria-label="Open Mystery Mode"
                 >
                     <span class="mode-number">03</span>
                     <span class="mode-title">Mystery Mode</span>
                     <span class="mode-description">
-                        Nobody knows what waits beyond this door.
+                        A mysterious path beyond the usual escape.
                     </span>
-                    <span class="mode-meta">Enter at your own risk</span>
+                    <span class="qr-prompt">
+                        <img
+                            src="assets/images/easy-win-qr.png"
+                            alt="QR code for further information"
+                            width="88"
+                            height="88"
+                        >
+                        <span>Scan to provide feedback</span>
+                    </span>
+                    <span class="mode-meta">Click to discover more</span>
                 </a>
             </div>
         </section>
 
         <section id="campaign-screen" class="screen campaign-screen" hidden>
-            <div class="game-toolbar">
-                <button class="text-button" id="campaign-back">← Main menu</button>
-                <p class="streak-counter">Campaign Mode</p>
-            </div>
-
-            <div class="campaign-heading">
-                <p class="eyebrow">Choose your threat level</p>
-                <h2>Campaign Difficulty</h2>
-                <p>Victory condition: reach the exit before Dave is caught.</p>
-            </div>
-
-            <div class="difficulty-grid">
-                <button class="difficulty-card" data-difficulty="1">
-                    <strong>Difficulty 1</strong>
-                    <span>2 normal zombies</span>
-                </button>
-                <button class="difficulty-card" data-difficulty="2">
-                    <strong>Difficulty 2</strong>
-                    <span>3 normal zombies</span>
-                </button>
-                <button class="difficulty-card" data-difficulty="3">
-                    <strong>Difficulty 3</strong>
-                    <span>2 crushers: plants break and delay them for one turn</span>
-                </button>
-                <button class="difficulty-card" data-difficulty="4">
-                    <strong>Difficulty 4</strong>
-                    <span>3 jumpers: each can leap over one plant once</span>
-                </button>
-                <button class="difficulty-card boss-card" data-difficulty="5">
-                    <strong>Difficulty 5</strong>
-                    <span>2 giant 2×2 zombies that destroy plants and walls</span>
-                </button>
+            <div class="completion-card">
+                <p class="eyebrow">Campaign complete</p>
+                <h2>Dave Escaped Everything</h2>
+                <p>
+                    You cleared all five difficulties in
+                    <strong id="campaign-total-moves">0</strong> moves.
+                </p>
+                <div class="completion-actions">
+                    <button id="campaign-restart">Play campaign again</button>
+                    <button class="text-button" id="campaign-back">Main menu</button>
+                </div>
             </div>
         </section>
 
@@ -116,7 +97,8 @@
             <section class="instructions" aria-label="How to play">
                 <p>
                     Guide <strong>Dave (D)</strong> to the <strong>Exit (X)</strong>
-                    with the arrow keys or controls.
+                    with the arrow keys or controls. Press <kbd>Space</kbd> to
+                    restart the current mode.
                 </p>
                 <p id="mode-rules">
                     Zombies die when they move into plants <strong>(P)</strong>.

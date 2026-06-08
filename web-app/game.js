@@ -334,6 +334,49 @@ const createCampaignGame = function (difficulty, seed) {
 };
 
 /**
+ * Advances a successful campaign run to its next required level.
+ * Difficulty 1 must be cleared twice; difficulties 2-5 once each.
+ * @param {object} progress
+ * @param {number} progress.difficulty
+ * @param {number} progress.difficultyOneWins
+ * @param {number} progress.totalMoves
+ * @param {number} levelMoves
+ * @returns {object} Updated campaign progress.
+ */
+const advanceCampaignProgress = function (progress, levelMoves) {
+    const difficulty = progress.difficulty;
+    const difficultyOneWins = (
+        difficulty === 1
+        ? progress.difficultyOneWins + 1
+        : progress.difficultyOneWins
+    );
+    const totalMoves = progress.totalMoves + levelMoves;
+
+    if (difficulty === 1 && difficultyOneWins < 2) {
+        return {
+            difficulty: 1,
+            difficultyOneWins,
+            totalMoves,
+            complete: false
+        };
+    }
+    if (difficulty === 5) {
+        return {
+            difficulty: 5,
+            difficultyOneWins,
+            totalMoves,
+            complete: true
+        };
+    }
+    return {
+        difficulty: difficulty + 1,
+        difficultyOneWins,
+        totalMoves,
+        complete: false
+    };
+};
+
+/**
  * Returns the board dimensions.
  * @param {object} state
  * @returns {{ rows: number, cols: number }}
@@ -757,6 +800,7 @@ const resetGame = () => generatePlayableLevel();
 export {
     createGame,
     createCampaignGame,
+    advanceCampaignProgress,
     getBoardSize,
     getDave,
     getPlants,

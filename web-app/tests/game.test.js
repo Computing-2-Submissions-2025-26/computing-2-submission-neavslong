@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
     createGame,
     createCampaignGame,
+    advanceCampaignProgress,
     getBoardSize,
     getDave,
     getPlants,
@@ -104,6 +105,36 @@ describe("campaign difficulties", function () {
         assert.ok(getZombies(state).every((z) =>
             z.ability === "giant" && z.size === 2
         ));
+    });
+
+    it("requires two difficulty 1 wins before advancing", function () {
+        const first = advanceCampaignProgress({
+            difficulty: 1,
+            difficultyOneWins: 0,
+            totalMoves: 0,
+        }, 10);
+        assert.equal(first.difficulty, 1);
+        assert.equal(first.difficultyOneWins, 1);
+
+        const second = advanceCampaignProgress(first, 12);
+        assert.equal(second.difficulty, 2);
+        assert.equal(second.difficultyOneWins, 2);
+        assert.equal(second.totalMoves, 22);
+    });
+
+    it("advances through difficulty 5 and records total moves", function () {
+        let progress = {
+            difficulty: 2,
+            difficultyOneWins: 2,
+            totalMoves: 22,
+            complete: false,
+        };
+        [8, 9, 10, 11].forEach(function (moves) {
+            progress = advanceCampaignProgress(progress, moves);
+        });
+        assert.equal(progress.difficulty, 5);
+        assert.equal(progress.complete, true);
+        assert.equal(progress.totalMoves, 60);
     });
 });
 
