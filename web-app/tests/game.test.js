@@ -264,14 +264,13 @@ describe("zombie AI", function () {
     });
 
     it("zombie stays when all moves are blocked or do not reduce distance", function () {
-        // Plant at (3,3) blocks the direct downward path; other directions are farther.
+        // Wall at (3,3) blocks the direct downward path; other directions are farther.
         const state = mkState({
             dave: { row: 5, col: 3 },
             zombies: [{ id: "z1", row: 2, col: 3 }],
-            plants: [{ id: "p1", row: 3, col: 3 }],
             walls: [
                 { row: 2, col: 2 }, { row: 2, col: 4 },
-                { row: 1, col: 3 },
+                { row: 1, col: 3 }, { row: 3, col: 3 },
             ],
         });
         const next = moveZombies(state);
@@ -280,22 +279,17 @@ describe("zombie AI", function () {
         assert.equal(z.col, 3);
     });
 
-    it("zombie cannot move through plants", function () {
-        // Zombie at (3,3), plant at (4,3), Dave at (6,3). Only downward path is blocked.
+    it("zombie dies when it moves into a plant", function () {
+        // The plant is directly between the zombie and Dave.
         const state = mkState({
             dave: { row: 6, col: 3 },
             zombies: [{ id: "z1", row: 3, col: 3 }],
             plants: [{ id: "p1", row: 4, col: 3 }],
-            walls: [
-                { row: 3, col: 2 }, { row: 3, col: 4 }, // block sideways to force stuck
-                { row: 2, col: 3 },                      // block upward
-            ],
         });
         const next = moveZombies(state);
-        const z = getZombies(next)[0];
-        // All moves blocked – zombie stays put
-        assert.equal(z.row, 3);
-        assert.equal(z.col, 3);
+        assert.equal(getZombies(next).length, 0);
+        assert.deepEqual(getPlants(next), [{ id: "p1", row: 4, col: 3 }]);
+        assert.equal(getStatus(next), "playing");
     });
 
     it("zombie cannot move through walls", function () {

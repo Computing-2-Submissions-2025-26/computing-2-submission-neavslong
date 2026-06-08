@@ -3,7 +3,7 @@
  * Dave's Escape – a turn-based rescue puzzle.
  * An 8×8 board is randomly generated each game.
  * Dave (D) must reach the Exit (X) before Zombies (Z) become adjacent.
- * Plants (P) block zombies and can also be moved by the player.
+ * Plants (P) destroy zombies that move into them.
  * Walls (█) are permanent obstacles.
  */
 
@@ -426,7 +426,8 @@ const canMoveSelectedUnit = function (state, direction) {
  * Moves all zombies one step using a greedy AI; returns a new state.
  * Each zombie picks the legal move that most reduces Manhattan distance to Dave.
  * Tie-breaking order: up, right, down, left.
- * Zombies cannot move through walls, plants, other zombies, or outside the board.
+ * Zombies cannot move through walls, other zombies, or outside the board.
+ * A zombie is removed when it moves into a plant.
  * Status becomes "lost" if any zombie occupies or becomes adjacent to Dave.
  * @param {object} state
  * @returns {object} New state after all zombies have moved.
@@ -446,7 +447,6 @@ const moveZombies = function (state) {
             };
             if (!isInsideBoard(state, next)) { return b; }
             if (state.walls.some((w) => posEq(w, next))) { return b; }
-            if (state.plants.some((p) => posEq(p, next))) { return b; }
             const blocked = acc.zombies.some(
                 (z) => z.id !== current.id && posEq(z, next)
             );
@@ -456,13 +456,21 @@ const moveZombies = function (state) {
             return b;
         }, {pos: null, dist: currentDist});
         const newPos = (best.pos !== null) ? best.pos : current;
-        const newZombies = acc.zombies.map(function (z) {
+        const hitPlant = state.plants.some((p) => posEq(p, newPos));
+        const movedZombies = acc.zombies.map(function (z) {
             if (z.id !== current.id) { return z; }
             return {id: z.id, row: newPos.row, col: newPos.col};
         });
+        const newZombies = (
+            hitPlant
+            ? movedZombies.filter((z) => z.id !== current.id)
+            : movedZombies
+        );
         const lost = acc.status === "lost" ||
-            posEq(newPos, state.dave) ||
-            isAdjacent(newPos, state.dave);
+            (!hitPlant && (
+                posEq(newPos, state.dave) ||
+                isAdjacent(newPos, state.dave)
+            ));
         return {
             zombies: newZombies,
             status: (
