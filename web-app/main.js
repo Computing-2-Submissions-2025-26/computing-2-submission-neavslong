@@ -17,6 +17,18 @@ import {
 } from "./game.js";
 
 const STREAK_KEY = "davesEscapeRandomStreak";
+const CHEAT_CODE = [
+    "ArrowUp",
+    "ArrowUp",
+    "ArrowDown",
+    "ArrowDown",
+    "ArrowLeft",
+    "ArrowRight",
+    "ArrowLeft",
+    "ArrowRight",
+    "b",
+    "a"
+];
 
 const homeScreenEl = document.getElementById("home-screen");
 const campaignScreenEl = document.getElementById("campaign-screen");
@@ -44,6 +56,7 @@ let campaignTotalMoves = 0;
 let campaignAction = "restart";
 let nextCampaignDifficulty = 1;
 let campaignComplete = false;
+let cheatCodeIndex = 0;
 
 function loadStreak() {
     try {
@@ -259,6 +272,30 @@ function animateBoard(className) {
     boardEl.classList.add(className);
 }
 
+function clearCurrentCampaignLevel() {
+    state = Object.assign({}, state, {
+        status: "won",
+        turn: "player"
+    });
+    recordedResult = null;
+    render();
+}
+
+function trackCheatCode(key) {
+    const expected = CHEAT_CODE[cheatCodeIndex];
+    if (key === expected) {
+        cheatCodeIndex += 1;
+    } else {
+        cheatCodeIndex = key === CHEAT_CODE[0] ? 1 : 0;
+    }
+
+    if (cheatCodeIndex === CHEAT_CODE.length) {
+        cheatCodeIndex = 0;
+        return true;
+    }
+    return false;
+}
+
 function handleDirection(dir) {
     if (gameScreenEl.hidden) { return; }
     const nextState = moveDave(state, dir);
@@ -269,6 +306,7 @@ function handleDirection(dir) {
 
 function startRandomChallenge() {
     currentMode = "random";
+    cheatCodeIndex = 0;
     state = resetGame();
     recordedResult = null;
     homeScreenEl.hidden = true;
@@ -280,6 +318,7 @@ function startRandomChallenge() {
 
 function startCampaign(difficulty) {
     currentMode = "campaign";
+    cheatCodeIndex = 0;
     state = createCampaignGame(difficulty);
     campaignDifficulty = difficulty;
     recordedResult = null;
@@ -311,6 +350,7 @@ function continueCampaign() {
 }
 
 function showMainMenu() {
+    cheatCodeIndex = 0;
     gameScreenEl.hidden = true;
     campaignScreenEl.hidden = true;
     homeScreenEl.hidden = false;
@@ -367,6 +407,18 @@ const KEY_MAP = {
 };
 
 document.addEventListener("keydown", function (e) {
+    const cheatKey = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (
+        currentMode === "campaign" &&
+        !gameScreenEl.hidden &&
+        !isWon(state) &&
+        trackCheatCode(cheatKey)
+    ) {
+        e.preventDefault();
+        clearCurrentCampaignLevel();
+        return;
+    }
+
     if (e.code === "Space" && !e.repeat && homeScreenEl.hidden) {
         e.preventDefault();
         if (currentMode === "campaign") {
