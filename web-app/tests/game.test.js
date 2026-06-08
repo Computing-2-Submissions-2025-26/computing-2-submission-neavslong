@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
     createGame,
+    createCampaignGame,
     getBoardSize,
     getDave,
     getPlants,
@@ -9,6 +10,7 @@ import {
     getExit,
     getStatus,
     getMoveCount,
+    getDifficulty,
     isInsideBoard,
     isCellOccupied,
     canMoveDave,
@@ -72,6 +74,36 @@ describe("createGame", function () {
         const state = createGame();
         assert.equal(getStatus(state), "playing");
         assert.equal(getMoveCount(state), 0);
+    });
+});
+
+describe("campaign difficulties", function () {
+    it("difficulty 1 and 2 create exactly two and three zombies", function () {
+        assert.equal(getZombies(createCampaignGame(1, 11)).length, 2);
+        assert.equal(getZombies(createCampaignGame(2, 11)).length, 3);
+    });
+
+    it("difficulty 3 creates two crusher zombies", function () {
+        const state = createCampaignGame(3, 12);
+        assert.equal(getDifficulty(state), 3);
+        assert.equal(getZombies(state).length, 2);
+        assert.ok(getZombies(state).every((z) => z.ability === "crusher"));
+    });
+
+    it("difficulty 4 creates three jumpers with an unused jump", function () {
+        const state = createCampaignGame(4, 13);
+        assert.equal(getZombies(state).length, 3);
+        assert.ok(getZombies(state).every((z) =>
+            z.ability === "jumper" && z.jumpUsed === false
+        ));
+    });
+
+    it("difficulty 5 creates two 2x2 giant zombies", function () {
+        const state = createCampaignGame(5, 14);
+        assert.equal(getZombies(state).length, 2);
+        assert.ok(getZombies(state).every((z) =>
+            z.ability === "giant" && z.size === 2
+        ));
     });
 });
 
@@ -324,6 +356,78 @@ describe("zombie AI", function () {
         assert.equal(z.row, 2);
         assert.equal(z.col, 3);
         assert.equal(getStatus(next), "playing");
+    });
+
+    it("a crusher destroys a plant and stops for that turn", function () {
+        const state = mkState({
+            dave: { row: 6, col: 3 },
+            zombies: [{
+                id: "z1", row: 3, col: 3, ability: "crusher", size: 1,
+            }],
+            plants: [{ id: "p1", row: 4, col: 3 }],
+        });
+        const next = moveZombies(state);
+        const z = getZombies(next)[0];
+        assert.deepEqual({ row: z.row, col: z.col }, { row: 3, col: 3 });
+        assert.equal(getPlants(next).length, 0);
+    });
+
+    it("a jumper leaps over one plant and marks its jump as used", function () {
+        const state = mkState({
+            dave: { row: 6, col: 3 },
+            zombies: [{
+                id: "z1",
+                row: 2,
+                col: 3,
+                ability: "jumper",
+                size: 1,
+                jumpUsed: false,
+            }],
+            plants: [{ id: "p1", row: 3, col: 3 }],
+        });
+        const next = moveZombies(state);
+        const z = getZombies(next)[0];
+        assert.deepEqual({ row: z.row, col: z.col }, { row: 4, col: 3 });
+        assert.equal(z.jumpUsed, true);
+        assert.equal(getPlants(next).length, 1);
+    });
+
+    it("a jumper cannot jump over a second plant", function () {
+        const state = mkState({
+            dave: { row: 6, col: 3 },
+            zombies: [{
+                id: "z1",
+                row: 2,
+                col: 3,
+                ability: "jumper",
+                size: 1,
+                jumpUsed: true,
+            }],
+            plants: [{ id: "p1", row: 3, col: 3 }],
+        });
+        const next = moveZombies(state);
+        assert.equal(getZombies(next).length, 0);
+        assert.equal(getPlants(next).length, 1);
+    });
+
+    it("a giant destroys plants and walls in its destination footprint", function () {
+        const state = mkState({
+            rows: 8,
+            cols: 8,
+            dave: { row: 6, col: 3 },
+            exit: { row: 0, col: 7 },
+            zombies: [{
+                id: "z1", row: 2, col: 3, ability: "giant", size: 2,
+            }],
+            plants: [{ id: "p1", row: 4, col: 3 }],
+            walls: [{ row: 4, col: 4 }],
+        });
+        const next = moveZombies(state);
+        const z = getZombies(next)[0];
+        assert.deepEqual({ row: z.row, col: z.col }, { row: 3, col: 3 });
+        assert.equal(getPlants(next).length, 0);
+        assert.equal(getWalls(next).length, 0);
+        assert.equal(isCellOccupied(next, { row: 4, col: 4 }), true);
     });
 
     it("two zombies do not occupy the same cell", function () {

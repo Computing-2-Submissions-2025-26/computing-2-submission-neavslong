@@ -40,9 +40,9 @@
                     </span>
                 </button>
 
-                <a
+                <button
                     class="mode-card campaign-card"
-                    href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                    id="campaign-mode"
                     aria-label="Open Campaign Mode"
                 >
                     <span class="mode-number">02</span>
@@ -51,25 +51,66 @@
                         Difficulty settings and special victory conditions.
                     </span>
                     <span class="mode-meta">Enter campaign</span>
-                </a>
+                </button>
 
-                <div class="mode-card locked-card" aria-disabled="true">
+                <a
+                    class="mode-card rick-card"
+                    href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                    aria-label="Open Mystery Mode"
+                >
                     <span class="mode-number">03</span>
-                    <span class="mode-title">Coming Soon</span>
+                    <span class="mode-title">Mystery Mode</span>
                     <span class="mode-description">
-                        A third way to escape is still under construction.
+                        Nobody knows what waits beyond this door.
                     </span>
-                    <span class="mode-meta">Locked</span>
-                </div>
+                    <span class="mode-meta">Enter at your own risk</span>
+                </a>
+            </div>
+        </section>
+
+        <section id="campaign-screen" class="screen campaign-screen" hidden>
+            <div class="game-toolbar">
+                <button class="text-button" id="campaign-back">← Main menu</button>
+                <p class="streak-counter">Campaign Mode</p>
+            </div>
+
+            <div class="campaign-heading">
+                <p class="eyebrow">Choose your threat level</p>
+                <h2>Campaign Difficulty</h2>
+                <p>Victory condition: reach the exit before Dave is caught.</p>
+            </div>
+
+            <div class="difficulty-grid">
+                <button class="difficulty-card" data-difficulty="1">
+                    <strong>Difficulty 1</strong>
+                    <span>2 normal zombies</span>
+                </button>
+                <button class="difficulty-card" data-difficulty="2">
+                    <strong>Difficulty 2</strong>
+                    <span>3 normal zombies</span>
+                </button>
+                <button class="difficulty-card" data-difficulty="3">
+                    <strong>Difficulty 3</strong>
+                    <span>2 crushers: plants break and delay them for one turn</span>
+                </button>
+                <button class="difficulty-card" data-difficulty="4">
+                    <strong>Difficulty 4</strong>
+                    <span>3 jumpers: each can leap over one plant once</span>
+                </button>
+                <button class="difficulty-card boss-card" data-difficulty="5">
+                    <strong>Difficulty 5</strong>
+                    <span>2 giant 2×2 zombies that destroy plants and walls</span>
+                </button>
             </div>
         </section>
 
         <section id="game-screen" class="screen game-screen" hidden>
             <div class="game-toolbar">
                 <button class="text-button" id="back-home">← Main menu</button>
-                <p class="streak-counter">
+                <p class="streak-counter" id="streak-display">
                     Win streak <strong id="game-streak">0</strong>
                 </p>
+                <p class="streak-counter" id="difficulty-display" hidden></p>
             </div>
 
             <section class="instructions" aria-label="How to play">
@@ -77,7 +118,7 @@
                     Guide <strong>Dave (D)</strong> to the <strong>Exit (X)</strong>
                     with the arrow keys or controls.
                 </p>
-                <p>
+                <p id="mode-rules">
                     Zombies die when they move into plants <strong>(P)</strong>.
                     Walls <strong>(█)</strong> block movement. Dave loses when a
                     zombie reaches the space directly above, below, left, or right.

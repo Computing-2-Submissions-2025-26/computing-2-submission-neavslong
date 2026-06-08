@@ -1,5 +1,6 @@
 import {
     createGame,
+    createCampaignGame,
     getBoardSize,
     getDave,
     getPlants,
@@ -7,6 +8,7 @@ import {
     getWalls,
     getExit,
     getMoveCount,
+    getDifficulty,
     moveDave,
     resetGame,
     isWon,
@@ -16,15 +18,21 @@ import {
 const STREAK_KEY = "davesEscapeRandomStreak";
 
 const homeScreenEl = document.getElementById("home-screen");
+const campaignScreenEl = document.getElementById("campaign-screen");
 const gameScreenEl = document.getElementById("game-screen");
 const boardEl = document.getElementById("board");
 const statusEl = document.getElementById("status");
 const moveCountEl = document.getElementById("move-count");
 const homeStreakEl = document.getElementById("home-streak");
 const gameStreakEl = document.getElementById("game-streak");
+const streakDisplayEl = document.getElementById("streak-display");
+const difficultyDisplayEl = document.getElementById("difficulty-display");
+const modeRulesEl = document.getElementById("mode-rules");
+const resetEl = document.getElementById("reset");
 
 let state = createGame();
 let recordedResult = null;
+let currentMode = "random";
 
 function loadStreak() {
     try {
@@ -51,6 +59,7 @@ function renderStreak() {
 }
 
 function recordResult() {
+    if (currentMode !== "random") { return; }
     if (isWon(state) && recordedResult !== "won") {
         winStreak += 1;
         recordedResult = "won";
@@ -95,12 +104,22 @@ function render() {
             cell.className = "cell plant";
             cell.textContent = "P";
             cell.setAttribute("aria-label", `Plant at row ${r} col ${c}`);
-        } else if (zombies.some((z) => z.row === r && z.col === c)) {
-            cell.className = "cell zombie";
-            cell.textContent = "Z";
+        } else if (zombies.some(function (z) {
+            const size = z.size || 1;
+            return r >= z.row && r < z.row + size &&
+                c >= z.col && c < z.col + size;
+        })) {
+            const zombie = zombies.find(function (z) {
+                const size = z.size || 1;
+                return r >= z.row && r < z.row + size &&
+                    c >= z.col && c < z.col + size;
+            });
+            const giant = (zombie.size || 1) === 2;
+            cell.className = giant ? "cell giant-zombie" : "cell zombie";
+            cell.textContent = giant ? "G" : "Z";
             cell.setAttribute(
                 "aria-label",
-                `Zombie at row ${r} col ${c}`
+                `${giant ? "Giant zombie" : "Zombie"} at row ${r} col ${c}`
             );
         } else {
             cell.className = "cell empty";
@@ -116,7 +135,11 @@ function render() {
     renderStreak();
 
     if (isWon(state)) {
-        statusEl.textContent = `You escaped! Win streak: ${winStreak}.`;
+        statusEl.textContent = (
+            currentMode === "random"
+            ? `You escaped! Win streak: ${winStreak}.`
+            : `Difficulty ${getDifficulty(state)} cleared!`
+        );
         statusEl.className = "status won";
     } else if (isLost(state)) {
         statusEl.textContent = "The zombies caught Dave! Game over.";
@@ -127,6 +150,31 @@ function render() {
     }
 }
 
+function setGameModeDetails() {
+    const difficulty = getDifficulty(state);
+    const campaignRules = {
+        1: "Two normal zombies. Plants destroy zombies that enter them.",
+        2: "Three normal zombies. Plants destroy zombies that enter them.",
+        3: "Two crushers. A plant is destroyed and stops the zombie for one turn.",
+        4: "Three jumpers. Each zombie can leap over one plant once.",
+        5: "Two giant 2×2 zombies. They destroy plants and walls in their path."
+    };
+    const isCampaign = currentMode === "campaign";
+    streakDisplayEl.hidden = isCampaign;
+    difficultyDisplayEl.hidden = !isCampaign;
+    difficultyDisplayEl.textContent = (
+        isCampaign ? `Campaign difficulty ${difficulty}` : ""
+    );
+    modeRulesEl.textContent = (
+        isCampaign
+        ? campaignRules[difficulty]
+        : "Zombies die when they move into plants. Walls block movement."
+    );
+    resetEl.textContent = (
+        isCampaign ? "Restart difficulty" : "New challenge"
+    );
+}
+
 function handleDirection(dir) {
     if (gameScreenEl.hidden) { return; }
     state = moveDave(state, dir);
@@ -134,15 +182,36 @@ function handleDirection(dir) {
 }
 
 function startRandomChallenge() {
+    currentMode = "random";
     state = resetGame();
     recordedResult = null;
     homeScreenEl.hidden = true;
+    campaignScreenEl.hidden = true;
     gameScreenEl.hidden = false;
+    setGameModeDetails();
     render();
+}
+
+function startCampaign(difficulty) {
+    currentMode = "campaign";
+    state = createCampaignGame(difficulty);
+    recordedResult = null;
+    homeScreenEl.hidden = true;
+    campaignScreenEl.hidden = true;
+    gameScreenEl.hidden = false;
+    setGameModeDetails();
+    render();
+}
+
+function showCampaignMenu() {
+    homeScreenEl.hidden = true;
+    campaignScreenEl.hidden = false;
+    gameScreenEl.hidden = true;
 }
 
 function showMainMenu() {
     gameScreenEl.hidden = true;
+    campaignScreenEl.hidden = true;
     homeScreenEl.hidden = false;
     renderStreak();
 }
@@ -152,6 +221,22 @@ document.getElementById("random-mode").addEventListener(
     startRandomChallenge
 );
 
+document.getElementById("campaign-mode").addEventListener(
+    "click",
+    showCampaignMenu
+);
+
+document.getElementById("campaign-back").addEventListener(
+    "click",
+    showMainMenu
+);
+
+document.querySelectorAll("[data-difficulty]").forEach(function (button) {
+    button.addEventListener("click", function () {
+        startCampaign(Number(button.dataset.difficulty));
+    });
+});
+
 document.getElementById("back-home").addEventListener("click", showMainMenu);
 
 document.querySelectorAll("[data-dir]").forEach(function (btn) {
@@ -160,8 +245,12 @@ document.querySelectorAll("[data-dir]").forEach(function (btn) {
     });
 });
 
-document.getElementById("reset").addEventListener("click", function () {
-    startRandomChallenge();
+resetEl.addEventListener("click", function () {
+    if (currentMode === "campaign") {
+        startCampaign(getDifficulty(state));
+    } else {
+        startRandomChallenge();
+    }
 });
 
 const KEY_MAP = {

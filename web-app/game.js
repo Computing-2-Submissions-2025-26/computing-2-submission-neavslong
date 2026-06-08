@@ -17,6 +17,31 @@ const DIRS = [
 
 const posEq = (a, b) => a.row === b.row && a.col === b.col;
 const manhattan = (a, b) => Math.abs(a.row - b.row) + Math.abs(a.col - b.col);
+const zombieSize = (zombie) => zombie.size || 1;
+
+const zombieCells = function (zombie) {
+    const size = zombieSize(zombie);
+    return Array.from({length: size * size}, function (ignored, i) {
+        return {
+            row: zombie.row + Math.floor(i / size),
+            col: zombie.col + (i % size)
+        };
+    });
+};
+
+const zombieCovers = (zombie, position) =>
+    zombieCells(zombie).some((cell) => posEq(cell, position));
+
+const zombiesOverlap = (a, b) =>
+    zombieCells(a).some((cell) => zombieCovers(b, cell));
+
+const zombieDistance = (zombie, position) =>
+    Math.min(...zombieCells(zombie).map((cell) => manhattan(cell, position)));
+
+const zombieThreatens = (zombie, position) =>
+    zombieCells(zombie).some(
+        (cell) => posEq(cell, position) || isAdjacent(cell, position)
+    );
 
 /**
  * Creates a seeded linear-congruential pseudo-random number generator.
@@ -219,6 +244,95 @@ const generatePlayableLevel = function (seed) {
  */
 const createGame = () => generatePlayableLevel();
 
+const CAMPAIGN_RULES = {
+    1: {count: 2, ability: "normal", size: 1},
+    2: {count: 3, ability: "normal", size: 1},
+    3: {count: 2, ability: "crusher", size: 1},
+    4: {count: 3, ability: "jumper", size: 1},
+    5: {count: 2, ability: "giant", size: 2}
+};
+
+/**
+ * Creates a random campaign level using the selected difficulty rules.
+ * @param {number} difficulty - Integer from 1 to 5.
+ * @param {number} [seed] - Optional seed for reproducible levels.
+ * @returns {object} Campaign game state.
+ */
+const createCampaignGame = function (difficulty, seed) {
+    const level = Number(difficulty);
+    const rule = CAMPAIGN_RULES[level] || CAMPAIGN_RULES[1];
+    const base = generatePlayableLevel(seed);
+    const rng = makePrng(seed);
+    const shuffled = function (arr) {
+        return arr.reduce(function (acc, item, i) {
+            const copy = acc.slice();
+            const j = Math.floor(rng() * (i + 1));
+            copy.splice(j, 0, item);
+            return copy;
+        }, []);
+    };
+    const occupied = function (position) {
+        return posEq(position, base.dave) ||
+            posEq(position, base.exit) ||
+            base.walls.some((wall) => posEq(wall, position)) ||
+            base.plants.some((plant) => posEq(plant, position));
+    };
+
+    let plants = base.plants;
+    let walls = base.walls;
+    let spawnPositions;
+
+    if (rule.size === 2) {
+        spawnPositions = [
+            {row: 1, col: 0},
+            {row: 1, col: base.cols - 2}
+        ];
+        const spawnCells = spawnPositions.flatMap(function (position) {
+            return zombieCells({
+                row: position.row,
+                col: position.col,
+                size: 2
+            });
+        });
+        plants = plants.filter(
+            (plant) => !spawnCells.some((cell) => posEq(cell, plant))
+        );
+        walls = walls.filter(
+            (wall) => !spawnCells.some((cell) => posEq(cell, wall))
+        );
+    } else {
+        const candidates = Array.from(
+            {length: Math.floor(base.rows / 2) * base.cols},
+            function (ignored, i) {
+                return {
+                    row: Math.floor(i / base.cols),
+                    col: i % base.cols
+                };
+            }
+        ).filter((position) => !occupied(position));
+        spawnPositions = shuffled(candidates).slice(0, rule.count);
+    }
+
+    const zombies = spawnPositions.map(function (position, i) {
+        return {
+            id: `z${i + 1}`,
+            row: position.row,
+            col: position.col,
+            size: rule.size,
+            ability: rule.ability,
+            jumpUsed: false
+        };
+    });
+
+    return Object.assign({}, base, {
+        mode: "campaign",
+        difficulty: level,
+        plants,
+        walls,
+        zombies
+    });
+};
+
 /**
  * Returns the board dimensions.
  * @param {object} state
@@ -283,6 +397,13 @@ const getTurn = (state) => state.turn;
 const getMoveCount = (state) => state.moveCount;
 
 /**
+ * Returns the campaign difficulty, or null in random challenge mode.
+ * @param {object} state
+ * @returns {number | null}
+ */
+const getDifficulty = (state) => state.difficulty || null;
+
+/**
  * Returns the id of the currently selected unit ("dave" or a plant id).
  * @param {object} state
  * @returns {string}
@@ -338,7 +459,7 @@ const isCellOccupied = (state, position) =>
     posEq(state.dave, position) ||
     state.walls.some((w) => posEq(w, position)) ||
     state.plants.some((p) => posEq(p, position)) ||
-    state.zombies.some((z) => posEq(z, position));
+    state.zombies.some((z) => zombieCovers(z, position));
 
 /**
  * Returns true if two positions are orthogonally adjacent (Manhattan distance 1).
@@ -376,7 +497,7 @@ const canMoveDave = function (state, direction) {
     const next = {row: state.dave.row + dir.dr, col: state.dave.col + dir.dc};
     if (!isInsideBoard(state, next)) { return false; }
     if (state.walls.some((w) => posEq(w, next))) { return false; }
-    if (state.zombies.some((z) => posEq(z, next))) { return false; }
+    if (state.zombies.some((z) => zombieCovers(z, next))) { return false; }
     if (state.plants.some((p) => posEq(p, next))) { return false; }
     return true;
 };
@@ -399,7 +520,7 @@ const canMovePlant = function (state, plantId, direction) {
     const next = {row: plant.row + dir.dr, col: plant.col + dir.dc};
     if (!isInsideBoard(state, next)) { return false; }
     if (state.walls.some((w) => posEq(w, next))) { return false; }
-    if (state.zombies.some((z) => posEq(z, next))) { return false; }
+    if (state.zombies.some((z) => zombieCovers(z, next))) { return false; }
     if (posEq(state.dave, next)) { return false; }
     if (posEq(state.exit, next)) { return false; }
     const overlap = state.plants.some(
@@ -426,8 +547,8 @@ const canMoveSelectedUnit = function (state, direction) {
  * Moves all zombies one step using a greedy AI; returns a new state.
  * Each zombie picks the legal move that most reduces Manhattan distance to Dave.
  * Tie-breaking order: up, right, down, left.
- * Zombies cannot move through walls, the exit, other zombies, or outside the board.
- * A zombie is removed when it moves into a plant.
+ * Campaign abilities may change how plants and walls are handled.
+ * The exit always blocks zombies.
  * Status becomes "lost" if any zombie occupies or becomes adjacent to Dave.
  * @param {object} state
  * @returns {object} New state after all zombies have moved.
@@ -439,49 +560,120 @@ const moveZombies = function (state) {
         const current = acc.zombies.find(
             function (z) { return z.id === zombie.id; }
         );
-        const currentDist = manhattan(current, state.dave);
+        const currentDist = zombieDistance(current, state.dave);
         const best = DIRS.reduce(function (b, dir) {
-            const next = {
+            const firstStep = {
                 row: current.row + dir.dr,
                 col: current.col + dir.dc
             };
-            if (!isInsideBoard(state, next)) { return b; }
-            if (state.walls.some((w) => posEq(w, next))) { return b; }
-            if (posEq(state.exit, next)) { return b; }
+            const canJump = current.ability === "jumper" &&
+                !current.jumpUsed &&
+                acc.plants.some((plant) => posEq(plant, firstStep));
+            const next = {
+                row: current.row + dir.dr * (canJump ? 2 : 1),
+                col: current.col + dir.dc * (canJump ? 2 : 1)
+            };
+            const moved = Object.assign({}, current, {
+                row: next.row,
+                col: next.col
+            });
+            const cells = zombieCells(moved);
+            if (!cells.every((cell) => isInsideBoard(state, cell))) {
+                return b;
+            }
+            if (cells.some((cell) => posEq(state.exit, cell))) { return b; }
+            if (
+                current.ability !== "giant" &&
+                cells.some(
+                    (cell) => acc.walls.some((wall) => posEq(wall, cell))
+                )
+            ) {
+                return b;
+            }
+            if (
+                canJump &&
+                cells.some(
+                    (cell) => acc.plants.some((plant) => posEq(plant, cell))
+                )
+            ) {
+                return b;
+            }
             const blocked = acc.zombies.some(
-                (z) => z.id !== current.id && posEq(z, next)
+                (z) => z.id !== current.id && zombiesOverlap(z, moved)
             );
             if (blocked) { return b; }
-            const d = manhattan(next, state.dave);
-            if (d < b.dist) { return {pos: next, dist: d}; }
+            const d = zombieDistance(moved, state.dave);
+            if (d < b.dist) {
+                return {pos: next, dist: d, jumped: canJump};
+            }
             return b;
-        }, {pos: null, dist: currentDist});
+        }, {pos: null, dist: currentDist, jumped: false});
         const newPos = (best.pos !== null) ? best.pos : current;
-        const hitPlant = state.plants.some((p) => posEq(p, newPos));
+        const movedZombie = Object.assign({}, current, {
+            row: newPos.row,
+            col: newPos.col,
+            jumpUsed: current.jumpUsed || best.jumped
+        });
+        const hitPlants = acc.plants.filter(
+            (plant) => zombieCovers(movedZombie, plant)
+        );
+        const hitPlant = hitPlants.length > 0;
+        const crushesPlant = current.ability === "crusher" && hitPlant;
+        const destroysObstacles = current.ability === "giant";
+        const finalZombie = (
+            crushesPlant
+            ? current
+            : movedZombie
+        );
+        const zombieDies = hitPlant &&
+            !best.jumped &&
+            !crushesPlant &&
+            !destroysObstacles;
         const movedZombies = acc.zombies.map(function (z) {
             if (z.id !== current.id) { return z; }
-            return {id: z.id, row: newPos.row, col: newPos.col};
+            return finalZombie;
         });
         const newZombies = (
-            hitPlant
+            zombieDies
             ? movedZombies.filter((z) => z.id !== current.id)
             : movedZombies
         );
+        const occupiedCells = zombieCells(movedZombie);
+        const newPlants = (
+            crushesPlant || destroysObstacles
+            ? acc.plants.filter(
+                (plant) => !occupiedCells.some((cell) => posEq(cell, plant))
+            )
+            : acc.plants
+        );
+        const newWalls = (
+            destroysObstacles
+            ? acc.walls.filter(
+                (wall) => !occupiedCells.some((cell) => posEq(cell, wall))
+            )
+            : acc.walls
+        );
         const lost = acc.status === "lost" ||
-            (!hitPlant && (
-                posEq(newPos, state.dave) ||
-                isAdjacent(newPos, state.dave)
-            ));
+            (!zombieDies && zombieThreatens(finalZombie, state.dave));
         return {
             zombies: newZombies,
+            plants: newPlants,
+            walls: newWalls,
             status: (
                 lost ? "lost" : "playing"
             )
         };
-    }, {zombies: state.zombies, status: "playing"});
+    }, {
+        zombies: state.zombies,
+        plants: state.plants,
+        walls: state.walls,
+        status: "playing"
+    });
 
     return Object.assign({}, state, {
         zombies: result.zombies,
+        plants: result.plants,
+        walls: result.walls,
         status: result.status,
         turn: "player"
     });
@@ -564,6 +756,7 @@ const resetGame = () => generatePlayableLevel();
 
 export {
     createGame,
+    createCampaignGame,
     getBoardSize,
     getDave,
     getPlants,
@@ -573,6 +766,7 @@ export {
     getStatus,
     getTurn,
     getMoveCount,
+    getDifficulty,
     getSelectedUnit,
     getSelectableUnits,
     selectUnit,
