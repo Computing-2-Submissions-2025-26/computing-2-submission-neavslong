@@ -9,7 +9,7 @@
 </head>
 <body>
     <main>
-        <header class="site-header">
+        <header class="site-header game-title">
             <p class="eyebrow">A turn-based escape puzzle</p>
             <button class="home-title" id="home-title" aria-label="Return to main menu">
                 <img
@@ -27,7 +27,7 @@
             </div>
 
             <div class="mode-grid" aria-label="Game modes">
-                <button class="mode-card random-card" id="random-mode">
+                <button class="mode-card game-button random-card" id="random-mode">
                     <span class="mode-number">01</span>
                     <span class="mode-title">Random Challenge</span>
                     <span class="mode-description">
@@ -39,7 +39,7 @@
                 </button>
 
                 <button
-                    class="mode-card campaign-card"
+                    class="mode-card game-button campaign-card"
                     id="campaign-mode"
                     aria-label="Open Campaign Mode"
                 >
@@ -52,7 +52,7 @@
                 </button>
 
                 <a
-                    class="mode-card info-card"
+                    class="mode-card game-button info-card"
                     href="https://web.mit.edu/admissions-aid/"
                     aria-label="Open Mystery Mode"
                 >
@@ -76,7 +76,7 @@
         </section>
 
         <section id="campaign-screen" class="screen campaign-screen" hidden>
-            <div class="completion-card">
+            <div class="completion-card hud-panel">
                 <p class="eyebrow">Campaign complete</p>
                 <h2>Dave Escaped Everything</h2>
                 <p>
@@ -84,14 +84,16 @@
                     <strong id="campaign-total-moves">0</strong> moves.
                 </p>
                 <div class="completion-actions">
-                    <button id="campaign-restart">Play campaign again</button>
+                    <button class="game-button" id="campaign-restart">
+                        Play campaign again
+                    </button>
                     <button class="text-button" id="campaign-back">Main menu</button>
                 </div>
             </div>
         </section>
 
         <section id="game-screen" class="screen game-screen" hidden>
-            <div class="game-toolbar">
+            <div class="game-toolbar hud-panel">
                 <button class="text-button" id="back-home">← Main menu</button>
                 <p class="streak-counter" id="streak-display">
                     Win streak <strong id="game-streak">0</strong>
@@ -99,7 +101,7 @@
                 <p class="streak-counter" id="difficulty-display" hidden></p>
             </div>
 
-            <section class="instructions" aria-label="How to play">
+            <section class="instructions hud-panel" aria-label="How to play">
                 <p>
                     Guide <strong>Dave (D)</strong> to the <strong>Exit (X)</strong>
                     with the arrow keys or controls. Press <kbd>Space</kbd> to
@@ -112,18 +114,25 @@
                 </p>
             </section>
 
-            <p
-                class="status playing"
-                id="status"
-                role="status"
-                aria-live="polite"
-                aria-atomic="true"
-            >Playing - guide Dave to the exit!</p>
+            <div class="hud-row">
+                <p
+                    class="status playing hud-panel"
+                    id="status"
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                ><span class="status-icon" aria-hidden="true">🍃</span>
+                    <span id="status-text">Playing - guide Dave to the exit!</span>
+                </p>
 
-            <p class="move-count">Moves: <span id="move-count">0</span></p>
+                <p class="move-count hud-panel">
+                    <span aria-hidden="true">☀</span>
+                    Moves: <strong id="move-count">0</strong>
+                </p>
+            </div>
 
             <div
-                class="board"
+                class="board game-board"
                 id="board"
                 role="grid"
                 aria-label="Game board"
@@ -131,14 +140,16 @@
             ></div>
 
             <nav class="controls" aria-label="Movement controls">
-                <button data-dir="up" aria-label="Move up">↑</button>
+                <button class="game-button" data-dir="up" aria-label="Move up">↑</button>
                 <div class="controls-row">
-                    <button data-dir="left"  aria-label="Move left">←</button>
-                    <button data-dir="down"  aria-label="Move down">↓</button>
-                    <button data-dir="right" aria-label="Move right">→</button>
+                    <button class="game-button" data-dir="left" aria-label="Move left">←</button>
+                    <button class="game-button" data-dir="down" aria-label="Move down">↓</button>
+                    <button class="game-button" data-dir="right" aria-label="Move right">→</button>
                 </div>
-                <button id="reset" aria-label="Start a new random challenge">
-                    New challenge
+                <button class="game-button reset-button" id="reset"
+                    aria-label="Start a new random challenge">
+                    <span aria-hidden="true">♠</span>
+                    <span id="reset-text">New challenge</span>
                 </button>
             </nav>
         </section>

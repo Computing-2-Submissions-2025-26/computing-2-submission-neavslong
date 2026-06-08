@@ -23,6 +23,8 @@ const campaignScreenEl = document.getElementById("campaign-screen");
 const gameScreenEl = document.getElementById("game-screen");
 const boardEl = document.getElementById("board");
 const statusEl = document.getElementById("status");
+const statusIconEl = statusEl.querySelector(".status-icon");
+const statusTextEl = document.getElementById("status-text");
 const moveCountEl = document.getElementById("move-count");
 const homeStreakEl = document.getElementById("home-streak");
 const gameStreakEl = document.getElementById("game-streak");
@@ -30,6 +32,7 @@ const streakDisplayEl = document.getElementById("streak-display");
 const difficultyDisplayEl = document.getElementById("difficulty-display");
 const modeRulesEl = document.getElementById("mode-rules");
 const resetEl = document.getElementById("reset");
+const resetTextEl = document.getElementById("reset-text");
 const campaignTotalMovesEl = document.getElementById("campaign-total-moves");
 
 let state = createGame();
@@ -94,6 +97,14 @@ function recordResult() {
     }
 }
 
+function makePiece(src, className, alt) {
+    const piece = document.createElement("img");
+    piece.src = src;
+    piece.alt = alt;
+    piece.className = `piece ${className}`;
+    return piece;
+}
+
 function render() {
     const {rows, cols} = getBoardSize(state);
     const dave = getDave(state);
@@ -112,20 +123,26 @@ function render() {
         cell.setAttribute("role", "gridcell");
 
         if (r === dave.row && c === dave.col) {
-            cell.className = "cell dave";
-            cell.textContent = "D";
+            cell.className = "cell dave selected";
+            cell.append(makePiece(
+                "assets/dave-token.svg",
+                "piece-dave",
+                "Dave"
+            ));
             cell.setAttribute("aria-label", `Dave at row ${r} col ${c}`);
         } else if (r === exit.row && c === exit.col) {
-            cell.className = "cell exit";
-            cell.textContent = "X";
+            cell.className = "cell exit exit-tile";
             cell.setAttribute("aria-label", `Exit at row ${r} col ${c}`);
         } else if (walls.some((w) => w.row === r && w.col === c)) {
             cell.className = "cell wall";
-            cell.textContent = "█";
             cell.setAttribute("aria-label", "Wall");
         } else if (plants.some((p) => p.row === r && p.col === c)) {
             cell.className = "cell plant";
-            cell.textContent = "P";
+            cell.append(makePiece(
+                "assets/plant-small.svg",
+                "piece-plant",
+                "Friendly plant"
+            ));
             cell.setAttribute("aria-label", `Plant at row ${r} col ${c}`);
         } else if (zombies.some(function (z) {
             const size = z.size || 1;
@@ -139,7 +156,13 @@ function render() {
             });
             const giant = (zombie.size || 1) === 2;
             cell.className = giant ? "cell giant-zombie" : "cell zombie";
-            cell.textContent = giant ? "G" : "Z";
+            if (!giant || (r === zombie.row && c === zombie.col)) {
+                cell.append(makePiece(
+                    "assets/zombie-token.svg",
+                    "piece-zombie",
+                    giant ? "Giant zombie" : "Zombie"
+                ));
+            }
             cell.setAttribute(
                 "aria-label",
                 `${giant ? "Giant zombie" : "Zombie"} at row ${r} col ${c}`
@@ -159,22 +182,25 @@ function render() {
     setGameModeDetails();
 
     if (isWon(state)) {
-        statusEl.textContent = (
+        statusTextEl.textContent = (
             currentMode === "random"
             ? `You escaped! Win streak: ${winStreak}.`
             : campaignWinMessage()
         );
-        statusEl.className = "status won";
+        statusIconEl.textContent = "☀";
+        statusEl.className = "status won hud-panel";
     } else if (isLost(state)) {
-        statusEl.textContent = (
+        statusTextEl.textContent = (
             currentMode === "campaign"
             ? "Campaign run ended. Restart from difficulty 1."
             : "The zombies caught Dave! Game over."
         );
-        statusEl.className = "status lost";
+        statusIconEl.textContent = "🧠";
+        statusEl.className = "status lost hud-panel";
     } else {
-        statusEl.textContent = "Playing – guide Dave to the exit!";
-        statusEl.className = "status playing";
+        statusTextEl.textContent = "Playing - guide Dave to the exit!";
+        statusIconEl.textContent = "🍃";
+        statusEl.className = "status playing hud-panel";
     }
 }
 
@@ -215,21 +241,29 @@ function setGameModeDetails() {
         : "Zombies die when they move into plants. Walls block movement."
     );
     if (!isCampaign) {
-        resetEl.textContent = "New challenge";
+        resetTextEl.textContent = "New challenge";
     } else if (isWon(state)) {
-        resetEl.textContent = (
+        resetTextEl.textContent = (
             difficulty === 5 ? "View campaign result" : "Continue campaign"
         );
     } else if (isLost(state)) {
-        resetEl.textContent = "Restart campaign";
+        resetTextEl.textContent = "Restart campaign";
     } else {
-        resetEl.textContent = "Restart campaign";
+        resetTextEl.textContent = "Restart campaign";
     }
+}
+
+function animateBoard(className) {
+    boardEl.classList.remove("invalid-move", "successful-move");
+    void boardEl.offsetWidth;
+    boardEl.classList.add(className);
 }
 
 function handleDirection(dir) {
     if (gameScreenEl.hidden) { return; }
-    state = moveDave(state, dir);
+    const nextState = moveDave(state, dir);
+    animateBoard(nextState === state ? "invalid-move" : "successful-move");
+    state = nextState;
     render();
 }
 
