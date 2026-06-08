@@ -370,7 +370,11 @@ document.addEventListener("keydown", function (e) {
     if (e.code === "Space" && !e.repeat && homeScreenEl.hidden) {
         e.preventDefault();
         if (currentMode === "campaign") {
-            startNewCampaign();
+            if (campaignAction === "continue") {
+                continueCampaign();
+            } else {
+                startNewCampaign();
+            }
         } else {
             startRandomChallenge();
         }
