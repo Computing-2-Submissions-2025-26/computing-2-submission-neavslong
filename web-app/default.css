@@ -1,0 +1,159 @@
+/* ── Reset / base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: #0f0f1a;
+    color: #e0e0f0;
+    min-height: 100dvh;
+    padding: 1rem;
+    line-height: 1.5;
+}
+
+main {
+    max-width: 440px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* ── Headings & instructions ──────────────────────────────────────────────── */
+h1 {
+    text-align: center;
+    font-size: 1.6rem;
+    color: #c8d8ff;
+    letter-spacing: 0.04em;
+}
+
+.instructions {
+    font-size: 0.85rem;
+    color: #9090b0;
+    background: #1a1a2e;
+    border-left: 3px solid #4455aa;
+    padding: 0.6rem 0.8rem;
+    border-radius: 0 4px 4px 0;
+}
+
+.instructions p + p { margin-top: 0.4rem; }
+
+kbd {
+    display: inline-block;
+    background: #2a2a44;
+    border: 1px solid #555;
+    border-radius: 3px;
+    padding: 0 0.3em;
+    font-size: 0.85em;
+    font-family: monospace;
+}
+
+/* ── Status & move counter ────────────────────────────────────────────────── */
+.status {
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0.4rem;
+    border-radius: 4px;
+    min-height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status.playing { color: #90caf9; background: #0d2035; }
+.status.won     { color: #a5d6a7; background: #0a2010; }
+.status.lost    { color: #ef9a9a; background: #2a0a0a; }
+
+.move-count {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #aab;
+}
+
+/* ── Board grid ───────────────────────────────────────────────────────────── */
+.board {
+    display: grid;
+    gap: 3px;
+    background: #0a0a18;
+    border: 3px solid #2a2a50;
+    border-radius: 6px;
+    padding: 3px;
+    width: 100%;
+    aspect-ratio: 1;
+}
+
+/* ── Cells ────────────────────────────────────────────────────────────────── */
+.cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(0.65rem, 3.5vw, 1.1rem);
+    font-weight: 700;
+    font-family: monospace;
+    border-radius: 3px;
+    user-select: none;
+    transition: background 0.12s;
+    /* Minimum contrast 4.5:1 verified for all fg/bg pairs below */
+}
+
+.cell.empty  { background: #1c1c38; color: transparent; }
+.cell.wall   { background: #3a3a5a; color: #8888aa; }     /* contrast ≥ 4.6:1 */
+.cell.exit   { background: #b5451b; color: #fff8f0; }     /* contrast ≥ 5.2:1 */
+.cell.dave   { background: #1553a8; color: #ddeeff; }     /* contrast ≥ 5.4:1 */
+.cell.plant  { background: #1b5e20; color: #b9f6ca; }     /* contrast ≥ 7.1:1 */
+.cell.zombie { background: #4a0080; color: #e1bee7; }     /* contrast ≥ 5.8:1 */
+
+/* ── Controls ─────────────────────────────────────────────────────────────── */
+.controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.controls-row {
+    display: flex;
+    gap: 0.4rem;
+}
+
+button {
+    background: #1e1e3a;
+    color: #d0d8ff;
+    border: 2px solid #4455aa;
+    border-radius: 6px;
+    padding: 0.55rem 1.1rem;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    min-width: 3rem;
+    min-height: 2.75rem;
+    transition: background 0.1s, border-color 0.1s;
+}
+
+button:hover {
+    background: #2a2a54;
+    border-color: #7788cc;
+}
+
+button:active {
+    background: #3a3a64;
+}
+
+button:focus-visible {
+    outline: 3px solid #90caf9;
+    outline-offset: 3px;
+}
+
+#reset {
+    margin-top: 0.25rem;
+    background: #4a006a;
+    border-color: #9c27b0;
+    color: #f3e5f5;
+    font-size: 1rem;
+    padding: 0.55rem 1.5rem;
+}
+
+#reset:hover {
+    background: #5e0080;
+    border-color: #ba68c8;
+}

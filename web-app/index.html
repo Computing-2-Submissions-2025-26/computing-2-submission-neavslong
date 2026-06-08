@@ -1,9 +1,56 @@
-<!-- In HTML Comments are written like this -->
-<!-- They can all be removed for your apps -->
-<!doctype html> <!-- This first line tells browsers to expect modern standard html 5 -->
-<html lang="en-gb"> <!-- This is indicates the page is written in British English, useful for accessibility -->
-<meta charset="utf-8"> <!-- This indicates how the file is encoded. utf-8 is standard -->
-<title>Your Web-app Title</title> <!-- All pages need a title, this will be displayed in the browser's title bar -->
-<link rel="stylesheet" href="default.css"> <!-- Import style sheet – default.css -->
-<link rel="icon" href="./assets/favicon.png"> <!-- Import 'Favorites Icon' – favicon.png -->
-<script type="module" src="main.js"></script> <!-- Load the main script. Must be type="module". Have only one of these -->
+<!doctype html>
+<html lang="en-gb">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dave's Escape</title>
+    <link rel="stylesheet" href="default.css">
+    <script type="module" src="main.js"></script>
+</head>
+<body>
+    <main>
+        <h1>Dave's Escape</h1>
+
+        <section class="instructions" aria-label="How to play">
+            <p>
+                Guide <strong>Dave (D)</strong> to the <strong>Exit (X)</strong> using the
+                buttons below or <kbd>↑ ↓ ← →</kbd> arrow keys.
+            </p>
+            <p>
+                Zombies <strong>(Z)</strong> move after every step you take.
+                Plants <strong>(P)</strong> and walls <strong>(█)</strong> block zombies —
+                but you cannot walk through them either.
+                Reach the exit before a zombie gets next to Dave!
+            </p>
+        </section>
+
+        <p
+            class="status playing"
+            id="status"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+        >Playing – guide Dave to the exit!</p>
+
+        <p class="move-count">Moves: <span id="move-count">0</span></p>
+
+        <div
+            class="board"
+            id="board"
+            role="grid"
+            aria-label="Game board"
+            aria-readonly="true"
+        ></div>
+
+        <nav class="controls" aria-label="Movement controls">
+            <button data-dir="up" aria-label="Move up">↑</button>
+            <div class="controls-row">
+                <button data-dir="left"  aria-label="Move left">←</button>
+                <button data-dir="down"  aria-label="Move down">↓</button>
+                <button data-dir="right" aria-label="Move right">→</button>
+            </div>
+            <button id="reset" aria-label="Reset game">Reset</button>
+        </nav>
+    </main>
+</body>
+</html>
