@@ -426,7 +426,7 @@ const canMoveSelectedUnit = function (state, direction) {
  * Moves all zombies one step using a greedy AI; returns a new state.
  * Each zombie picks the legal move that most reduces Manhattan distance to Dave.
  * Tie-breaking order: up, right, down, left.
- * Zombies cannot move through walls, other zombies, or outside the board.
+ * Zombies cannot move through walls, the exit, other zombies, or outside the board.
  * A zombie is removed when it moves into a plant.
  * Status becomes "lost" if any zombie occupies or becomes adjacent to Dave.
  * @param {object} state
@@ -447,6 +447,7 @@ const moveZombies = function (state) {
             };
             if (!isInsideBoard(state, next)) { return b; }
             if (state.walls.some((w) => posEq(w, next))) { return b; }
+            if (posEq(state.exit, next)) { return b; }
             const blocked = acc.zombies.some(
                 (z) => z.id !== current.id && posEq(z, next)
             );

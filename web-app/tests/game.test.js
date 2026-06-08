@@ -308,6 +308,24 @@ describe("zombie AI", function () {
         assert.equal(z.col, 3);
     });
 
+    it("zombie cannot move onto or through the exit", function () {
+        const state = mkState({
+            dave: { row: 5, col: 3 },
+            exit: { row: 3, col: 3 },
+            zombies: [{ id: "z1", row: 2, col: 3 }],
+            walls: [
+                { row: 1, col: 3 },
+                { row: 2, col: 2 },
+                { row: 2, col: 4 },
+            ],
+        });
+        const next = moveZombies(state);
+        const z = getZombies(next)[0];
+        assert.equal(z.row, 2);
+        assert.equal(z.col, 3);
+        assert.equal(getStatus(next), "playing");
+    });
+
     it("two zombies do not occupy the same cell", function () {
         // Both zombies want to move right into the same cell.
         const state = mkState({
