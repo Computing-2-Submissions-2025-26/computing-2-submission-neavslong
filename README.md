@@ -2,6 +2,17 @@
 # Computing 2 Coursework Submission.
 **CID**: 02600255
 
+A turn based board game inspired by klotski and plants vs zombie
+
+Mode 1(Random mode) is not that interesting, try to achieve highest win streak
+Mode 2(Campaign mode) is more interesing and challenging, if you find it hard simply use up up down down left right left right B A to win each round even if you lose the round
+
+Mode3(Mystery Mode) is a prank.
+
+Hope you find it interesing.
+
+
+
 This is the submission template for your Computing 2 Applications coursework submission.
 
 ## Checklist
@@ -17,10 +28,10 @@ I'll run the same commands when I download your repos.
 ### Game Module – API
 *You will produce an API specification, i.e. a list of function names and their signatures, for a Javascript module that represents the state of your game and the operations you can perform on it that advances the game or provides information.*
 
-- [ ] Include a `.js ` module file in `/web-app` containing the API using `jsdoc`.
-- [ ] Update `/jsdoc.json` to point to this module in `.source.include` (line 7)
-- [ ] Compile jsdoc using the run configuration `Generate Docs`
-- [ ] Check the generated docs have compiled correctly.
+- [x] The API and JSDoc type definitions are in `web-app/game.js`.
+- [x] `jsdoc.json` includes `web-app/game.js`.
+- [x] Generate the API site with `npm run docs`.
+- [x] Open `docs/index.html` to browse the generated documentation.
 
 ### Game Module – Implementation
 *You will implement, in Javascript, the module you specified above. Such that your game can be simulated in code, e.g. in the debug console.*

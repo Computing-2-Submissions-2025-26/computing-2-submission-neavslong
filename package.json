@@ -4,6 +4,10 @@
   "version": "1.0.0",
   "description": "",
   "main": "web-app/Module.js",
+  "scripts": {
+    "docs": "jsdoc -c jsdoc.json",
+    "test": "mocha"
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {
