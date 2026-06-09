@@ -3,7 +3,7 @@
   "type": "module",
   "version": "1.0.0",
   "description": "",
-  "main": "web-app/Module.js",
+  "main": "web-app/game.js",
   "scripts": {
     "docs": "jsdoc -c jsdoc.json",
     "test": "mocha"
