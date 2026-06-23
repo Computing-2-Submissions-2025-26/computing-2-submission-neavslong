@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
     createGame,
+    generatePlayableLevel,
     createCampaignGame,
     advanceCampaignProgress,
     getBoardSize,
@@ -12,10 +13,17 @@ import {
     getStatus,
     getMoveCount,
     getDifficulty,
+    getSelectedUnit,
+    getSelectableUnits,
+    selectUnit,
     isInsideBoard,
     isCellOccupied,
     canMoveDave,
+    canMovePlant,
+    canMoveSelectedUnit,
     moveDave,
+    movePlant,
+    moveSelectedUnit,
     moveZombies,
     isAdjacent,
     isWon,
@@ -32,11 +40,14 @@ const mkState = (overrides = {}) => ({
     plants: [],
     zombies: [],
     walls: [],
+    selectedUnitId: "dave",
     status: "playing",
     turn: "player",
     moveCount: 0,
     ...overrides,
 });
+
+const clone = (value) => JSON.parse(JSON.stringify(value));
 
 // ─── createGame ──────────────────────────────────────────────────────────────
 
@@ -76,6 +87,43 @@ describe("createGame", function () {
         assert.equal(getStatus(state), "playing");
         assert.equal(getMoveCount(state), 0);
     });
+
+    it("places plants away from edges with useful neighbouring cells", function () {
+        const directions = [
+            { row: -1, col: 0 },
+            { row: 1, col: 0 },
+            { row: 0, col: -1 },
+            { row: 0, col: 1 },
+        ];
+        Array.from({ length: 20 }, function (ignored, i) {
+            return generatePlayableLevel(i + 1);
+        }).forEach(function (state) {
+            const wallKeys = new Set(
+                getWalls(state).map((wall) => `${wall.row},${wall.col}`)
+            );
+            getPlants(state).forEach(function (plant) {
+                assert.equal(plant.row > 0 && plant.row < 7, true);
+                assert.equal(plant.col > 0 && plant.col < 7, true);
+                const openNeighbours = directions.filter(function (direction) {
+                    const position = {
+                        row: plant.row + direction.row,
+                        col: plant.col + direction.col,
+                    };
+                    return isInsideBoard(state, position) &&
+                        !wallKeys.has(`${position.row},${position.col}`) &&
+                        !(
+                            getDave(state).row === position.row &&
+                            getDave(state).col === position.col
+                        ) &&
+                        !(
+                            getExit(state).row === position.row &&
+                            getExit(state).col === position.col
+                        );
+                });
+                assert.equal(openNeighbours.length >= 2, true);
+            });
+        });
+    });
 });
 
 describe("campaign difficulties", function () {
@@ -88,23 +136,27 @@ describe("campaign difficulties", function () {
         const state = createCampaignGame(3, 12);
         assert.equal(getDifficulty(state), 3);
         assert.equal(getZombies(state).length, 2);
-        assert.ok(getZombies(state).every((z) => z.ability === "crusher"));
+        getZombies(state).forEach(function (zombie) {
+            assert.equal(zombie.ability, "crusher");
+        });
     });
 
     it("difficulty 4 creates three jumpers with an unused jump", function () {
         const state = createCampaignGame(4, 13);
         assert.equal(getZombies(state).length, 3);
-        assert.ok(getZombies(state).every((z) =>
-            z.ability === "jumper" && z.jumpUsed === false
-        ));
+        getZombies(state).forEach(function (zombie) {
+            assert.equal(zombie.ability, "jumper");
+            assert.equal(zombie.jumpUsed, false);
+        });
     });
 
     it("difficulty 5 creates two 2x2 giant zombies", function () {
         const state = createCampaignGame(5, 14);
         assert.equal(getZombies(state).length, 2);
-        assert.ok(getZombies(state).every((z) =>
-            z.ability === "giant" && z.size === 2
-        ));
+        getZombies(state).forEach(function (zombie) {
+            assert.equal(zombie.ability, "giant");
+            assert.equal(zombie.size, 2);
+        });
     });
 
     it("requires two difficulty 1 wins before advancing", function () {
@@ -236,6 +288,167 @@ describe("canMoveDave / moveDave", function () {
         const dave = getDave(next);
         assert.equal(dave.row, 2);
         assert.equal(dave.col, 3);
+    });
+});
+
+// ─── Plant selection and movement ───────────────────────────────────────────
+
+describe("plant selection and movement", function () {
+    it("lists Dave and plants as selectable units", function () {
+        const state = mkState({
+            plants: [
+                { id: "p1", row: 2, col: 2 },
+                { id: "p2", row: 4, col: 4 },
+            ],
+        });
+        assert.deepEqual(getSelectableUnits(state), [
+            { id: "dave", row: 3, col: 3 },
+            { id: "p1", row: 2, col: 2 },
+            { id: "p2", row: 4, col: 4 },
+        ]);
+    });
+
+    it("selects Dave or an existing plant, but ignores unknown ids", function () {
+        const state = mkState({
+            plants: [{ id: "p1", row: 2, col: 2 }],
+        });
+        const selectedPlant = selectUnit(state, "p1");
+        assert.equal(getSelectedUnit(selectedPlant), "p1");
+
+        const selectedDave = selectUnit(selectedPlant, "dave");
+        assert.equal(getSelectedUnit(selectedDave), "dave");
+
+        assert.equal(selectUnit(selectedDave, "missing"), selectedDave);
+    });
+
+    it("does not change selection after the game is over", function () {
+        const state = mkState({
+            status: "won",
+            plants: [{ id: "p1", row: 2, col: 2 }],
+        });
+        assert.equal(selectUnit(state, "p1"), state);
+    });
+
+    it("allows a plant to move into an empty board cell", function () {
+        const state = mkState({
+            plants: [{ id: "p1", row: 2, col: 2 }],
+        });
+        assert.equal(canMovePlant(state, "p1", "left"), true);
+
+        const next = movePlant(state, "p1", "left");
+        assert.deepEqual(getPlants(next), [{ id: "p1", row: 2, col: 1 }]);
+        assert.equal(getMoveCount(next), 1);
+    });
+
+    it("blocks plant movement into invalid cells", function () {
+        const blockedCases = [
+            { label: "outside board", direction: "up", plant: { row: 0, col: 2 } },
+            { label: "wall", direction: "up", wall: { row: 1, col: 2 } },
+            { label: "zombie", direction: "up", zombie: { row: 1, col: 2 } },
+            { label: "Dave", direction: "down", dave: { row: 3, col: 2 } },
+            { label: "exit", direction: "up", exit: { row: 1, col: 2 } },
+            { label: "plant", direction: "right", otherPlant: { row: 2, col: 3 } },
+        ];
+
+        blockedCases.forEach(function (testCase) {
+            const state = mkState({
+                dave: testCase.dave || { row: 5, col: 5 },
+                exit: testCase.exit || { row: 0, col: 6 },
+                plants: [
+                    Object.assign({ id: "p1" }, testCase.plant || {
+                        row: 2,
+                        col: 2,
+                    }),
+                    (
+                        testCase.otherPlant
+                        ? Object.assign({ id: "p2" }, testCase.otherPlant)
+                        : { id: "p2", row: 6, col: 6 }
+                    ),
+                ],
+                walls: testCase.wall ? [testCase.wall] : [],
+                zombies: testCase.zombie
+                    ? [Object.assign({ id: "z1" }, testCase.zombie)]
+                    : [],
+            });
+            assert.equal(
+                canMovePlant(state, "p1", testCase.direction),
+                false,
+                testCase.label
+            );
+            assert.equal(movePlant(state, "p1", testCase.direction), state);
+        });
+    });
+
+    it("moves the currently selected plant", function () {
+        const state = mkState({
+            selectedUnitId: "p1",
+            plants: [{ id: "p1", row: 2, col: 2 }],
+        });
+        assert.equal(canMoveSelectedUnit(state, "right"), true);
+
+        const next = moveSelectedUnit(state, "right");
+        assert.deepEqual(getPlants(next), [{ id: "p1", row: 2, col: 3 }]);
+    });
+
+    it("moving the selected plant triggers the zombie turn", function () {
+        const state = mkState({
+            rows: 8,
+            cols: 8,
+            dave: { row: 6, col: 6 },
+            exit: { row: 0, col: 6 },
+            selectedUnitId: "p1",
+            plants: [{ id: "p1", row: 2, col: 2 }],
+            zombies: [{ id: "z1", row: 0, col: 0 }],
+        });
+        const next = moveSelectedUnit(state, "right");
+        const zombie = getZombies(next)[0];
+        assert.deepEqual(getPlants(next), [{ id: "p1", row: 2, col: 3 }]);
+        assert.deepEqual({ row: zombie.row, col: zombie.col }, {
+            row: 0,
+            col: 1,
+        });
+    });
+
+    it("selected Dave still moves through the selected-unit API", function () {
+        const state = mkState({ selectedUnitId: "dave" });
+        const next = moveSelectedUnit(state, "up");
+        assert.deepEqual(getDave(next), { row: 2, col: 3 });
+    });
+
+    it("moving a plant triggers the zombie turn", function () {
+        const state = mkState({
+            rows: 8,
+            cols: 8,
+            dave: { row: 6, col: 6 },
+            exit: { row: 0, col: 6 },
+            plants: [{ id: "p1", row: 2, col: 2 }],
+            zombies: [{ id: "z1", row: 0, col: 0 }],
+        });
+        const next = movePlant(state, "p1", "right");
+        const zombie = getZombies(next)[0];
+        assert.deepEqual(getPlants(next), [{ id: "p1", row: 2, col: 3 }]);
+        assert.deepEqual({ row: zombie.row, col: zombie.col }, {
+            row: 0,
+            col: 1,
+        });
+    });
+
+    it("falls back to Dave when the selected plant is destroyed", function () {
+        const state = mkState({
+            dave: { row: 6, col: 3 },
+            selectedUnitId: "p1",
+            plants: [{ id: "p1", row: 4, col: 3 }],
+            zombies: [{
+                id: "z1",
+                row: 3,
+                col: 3,
+                ability: "crusher",
+                size: 1,
+            }],
+        });
+        const next = moveZombies(state);
+        assert.equal(getPlants(next).length, 0);
+        assert.equal(getSelectedUnit(next), "dave");
     });
 });
 
@@ -518,6 +731,82 @@ describe("isCellOccupied", function () {
     it("returns false for an empty cell", function () {
         const state = mkState({ dave: { row: 3, col: 3 } });
         assert.equal(isCellOccupied(state, { row: 0, col: 0 }), false);
+    });
+});
+
+// ─── API purity and invalid inputs ──────────────────────────────────────────
+
+describe("API purity and invalid inputs", function () {
+    it("moveDave does not mutate the original state", function () {
+        const state = mkState({
+            dave: { row: 3, col: 3 },
+            zombies: [],
+        });
+        const original = clone(state);
+
+        const next = moveDave(state, "up");
+
+        assert.deepEqual(state, original);
+        assert.notEqual(next, state);
+        assert.deepEqual(getDave(next), { row: 2, col: 3 });
+    });
+
+    it("movePlant does not mutate the original state", function () {
+        const state = mkState({
+            plants: [{ id: "p1", row: 2, col: 2 }],
+            zombies: [],
+        });
+        const original = clone(state);
+
+        const next = movePlant(state, "p1", "right");
+
+        assert.deepEqual(state, original);
+        assert.notEqual(next, state);
+        assert.deepEqual(getPlants(next), [{ id: "p1", row: 2, col: 3 }]);
+    });
+
+    it("getter results cannot mutate the game state", function () {
+        const state = mkState({
+            dave: { row: 3, col: 3 },
+            exit: { row: 0, col: 3 },
+            plants: [{ id: "p1", row: 2, col: 2 }],
+            zombies: [{ id: "z1", row: 1, col: 1 }],
+            walls: [{ row: 4, col: 4 }],
+        });
+
+        const dave = getDave(state);
+        const exit = getExit(state);
+        const plants = getPlants(state);
+        const zombies = getZombies(state);
+        const walls = getWalls(state);
+        const selectable = getSelectableUnits(state);
+
+        dave.row = 99;
+        exit.col = 99;
+        plants[0].row = 99;
+        zombies[0].col = 99;
+        walls[0].row = 99;
+        selectable[1].row = 99;
+
+        assert.deepEqual(state.dave, { row: 3, col: 3 });
+        assert.deepEqual(state.exit, { row: 0, col: 3 });
+        assert.deepEqual(state.plants, [{ id: "p1", row: 2, col: 2 }]);
+        assert.deepEqual(state.zombies, [{ id: "z1", row: 1, col: 1 }]);
+        assert.deepEqual(state.walls, [{ row: 4, col: 4 }]);
+    });
+
+    it("invalid movement inputs return unchanged state", function () {
+        const state = mkState({
+            selectedUnitId: "missing",
+            plants: [{ id: "p1", row: 2, col: 2 }],
+        });
+
+        assert.equal(canMoveDave(state, "north"), false);
+        assert.equal(moveDave(state, "north"), state);
+        assert.equal(canMovePlant(state, "missing", "up"), false);
+        assert.equal(movePlant(state, "missing", "up"), state);
+        assert.equal(canMoveSelectedUnit(state, "up"), false);
+        assert.equal(moveSelectedUnit(state, "up"), state);
     });
 });
 

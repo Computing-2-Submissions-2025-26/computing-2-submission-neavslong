@@ -51,27 +51,6 @@
                     <span class="mode-meta">Start from difficulty 1</span>
                 </button>
 
-                <a
-                    class="mode-card game-button info-card"
-                    href="https://web.mit.edu/admissions-aid/"
-                    aria-label="Open Mystery Mode"
-                >
-                    <span class="mode-number">03</span>
-                    <span class="mode-title">Mystery Mode</span>
-                    <span class="mode-description">
-                        A mysterious path beyond the usual escape.
-                    </span>
-                    <span class="qr-prompt">
-                        <img
-                            src="assets/images/easy-win-qr.png"
-                            alt="QR code for further information"
-                            width="88"
-                            height="88"
-                        >
-                        <span>Scan to provide feedback</span>
-                    </span>
-                    <span class="mode-meta">Click to discover more</span>
-                </a>
             </div>
         </section>
 
@@ -94,25 +73,75 @@
 
         <section id="game-screen" class="screen game-screen" hidden>
             <div class="game-toolbar hud-panel">
-                <button class="text-button" id="back-home">← Main menu</button>
+                <button
+                    class="text-button back-menu-button"
+                    id="back-home"
+                    aria-label="Return to main menu"
+                >
+                    <span aria-hidden="true">←</span>
+                    <span>Main menu</span>
+                </button>
                 <p class="streak-counter" id="streak-display">
                     Win streak <strong id="game-streak">0</strong>
                 </p>
                 <p class="streak-counter" id="difficulty-display" hidden></p>
             </div>
 
+            <ol
+                class="campaign-progress hud-panel"
+                id="campaign-progress"
+                aria-label="Campaign progress"
+                hidden
+            >
+                <li data-step="1">D1</li>
+                <li data-step="2">D2</li>
+                <li data-step="3">D3</li>
+                <li data-step="4">D4</li>
+                <li data-step="5">D5</li>
+            </ol>
+
             <section class="instructions hud-panel" aria-label="How to play">
                 <p>
-                    Guide <strong>Dave (D)</strong> to the <strong>Exit (X)</strong>
-                    with the arrow keys or controls. Press <kbd>Space</kbd> to
-                    restart the current mode.
+                    Select <strong>Dave</strong> or a <strong>plant</strong>, then
+                    move with the arrow keys or controls. Guide Dave to the
+                    <strong>glowing exit</strong>. Press <kbd>Space</kbd> for a
+                    fresh board.
                 </p>
                 <p id="mode-rules">
-                    Zombies die when they move into plants <strong>(P)</strong>.
-                    Walls <strong>(█)</strong> block movement. Dave loses when a
-                    zombie reaches the space directly above, below, left, or right.
+                    Every valid Dave or plant move gives zombies a turn. Put
+                    <strong>plants</strong> into zombie paths. <strong>Walls</strong>
+                    block movement. Dave loses when a zombie reaches the space
+                    directly above, below, left, or right.
                 </p>
             </section>
+
+            <details class="field-guide hud-panel">
+                <summary>Field guide</summary>
+                <div class="guide-grid">
+                    <span class="guide-cell guide-cell--piece">
+                        <img src="assets/dave-token.svg" alt="">
+                    </span>
+                    <span>Dave: select and move him to the exit.</span>
+                    <span class="guide-cell guide-cell--exit"></span>
+                    <span>Exit: reach it to clear the level.</span>
+                    <span class="guide-cell guide-cell--piece">
+                        <img src="assets/plant-small.svg" alt="">
+                    </span>
+                    <span>Plant: select and move it; normal zombies die on it.</span>
+                    <span class="guide-cell guide-cell--piece">
+                        <img src="assets/zombie-token.svg" alt="">
+                    </span>
+                    <span>Zombie: avoid direct contact or adjacency.</span>
+                    <span class="guide-cell guide-cell--wall"></span>
+                    <span>Wall: blocks movement.</span>
+                    <span class="guide-cell guide-cell--piece">
+                        <img src="assets/characters/plants/cactus-wall.svg" alt="">
+                    </span>
+                    <span>Cactus wall: blocks movement.</span>
+                    <span class="guide-cell guide-cell--water"></span>
+                    <span>Blue pool lane: water theme only, not a stronger tile.</span>
+                </div>
+            </details>
 
             <div class="hud-row">
                 <p
@@ -166,17 +195,18 @@
             <div class="reward-card reward-card--show">
                 <img class="reward-card__image"
                     src="assets/ui/reward-card-dave.svg" alt="Dave reward card">
-                <h2 class="reward-card__title">Level Complete!</h2>
-                <p class="reward-card__subtitle">Dave escaped!</p>
+                <h2 class="reward-card__title" id="win-title">Level Complete!</h2>
+                <p class="reward-card__subtitle" id="win-subtitle">Dave escaped!</p>
                 <button class="game-button" id="win-continue">Continue</button>
             </div>
         </section>
 
         <section class="lose-overlay" id="lose-overlay" hidden
-            aria-label="Campaign lost">
-            <div class="lose-message lose-message--slime">
+            aria-label="Game lost">
+            <div class="lose-message lose-message--slime" id="lose-title">
                 COMPUTING 2<br>ATE YOUR TOKENS!
             </div>
+            <p class="lose-summary hud-panel" id="lose-summary"></p>
             <div class="slime-drops" aria-hidden="true"></div>
             <div class="lose-actions">
                 <button class="game-button reset-button" id="lose-retry">

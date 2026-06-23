@@ -1,8 +1,3 @@
-import {
-    assignRandomPlantSkins,
-    assignZombieSkins
-} from "./mode2-visuals.js";
-
 /**
  * Dave's Escape - a turn-based rescue puzzle.
  *
@@ -30,7 +25,7 @@ import {
  * A movable plant.
  * @typedef {Position} Plant
  * @property {string} id - Unique plant identifier.
- * @property {string} [skin] - Optional visual skin identifier.
+ * @property {string} [skinId] - Optional visual skin identifier.
  */
 
 /**
@@ -47,7 +42,7 @@ import {
  * @property {"normal"|"crusher"|"jumper"|"giant"} [ability="normal"]
  *   Special campaign ability.
  * @property {boolean} [jumpUsed=false] - Whether a jumper has used its jump.
- * @property {string} [skin] - Optional visual skin identifier.
+ * @property {string} [skinId] - Optional visual skin identifier.
  */
 
 /**
@@ -115,6 +110,13 @@ const zombieThreatens = (zombie, position) =>
     zombieCells(zombie).some(
         (cell) => posEq(cell, position) || isAdjacent(cell, position)
     );
+
+const copyPosition = (position) => ({
+    row: position.row,
+    col: position.col
+});
+
+const copyUnit = (unit) => Object.assign({}, unit);
 
 /**
  * Creates a seeded linear-congruential pseudo-random number generator.
@@ -279,13 +281,48 @@ const generatePlayableLevel = function (seed) {
 
         const walls = shuffled.slice(0, nWalls);
         const afterWalls = shuffled.slice(nWalls);
+        const wallKeys = new Set(walls.map((w) => `${w.row},${w.col}`));
+        const isReservedCell = (position) =>
+            reserved.has(`${position.row},${position.col}`);
+        const isOpenForPlantInfluence = function (position) {
+            if (position.row < 0 || position.row >= ROWS) { return false; }
+            if (position.col < 0 || position.col >= COLS) { return false; }
+            if (wallKeys.has(`${position.row},${position.col}`)) {
+                return false;
+            }
+            if (posEq(position, dave) || posEq(position, exit)) {
+                return false;
+            }
+            return true;
+        };
+        const openNeighbourCount = function (position) {
+            return DIRS.filter(function (dir) {
+                return isOpenForPlantInfluence({
+                    row: position.row + dir.dr,
+                    col: position.col + dir.dc
+                });
+            }).length;
+        };
+        const centralPlantCells = afterWalls.filter(function (c) {
+            return c.row > 0 &&
+                c.row < ROWS - 1 &&
+                c.col > 0 &&
+                c.col < COLS - 1 &&
+                !isReservedCell(c) &&
+                openNeighbourCount(c) >= 2;
+        });
+        const plantCells = centralPlantCells.concat(
+            afterWalls.filter((c) => !centralPlantCells.some((p) => posEq(p, c)))
+        );
 
-        const plants = afterWalls.slice(0, nPlants).map(function (c, i) {
+        const plants = plantCells.slice(0, nPlants).map(function (c, i) {
             return {id: `p${i + 1}`, row: c.row, col: c.col};
         });
 
-        const topHalf = afterWalls.slice(nPlants).filter(function (c) {
-            return c.row < Math.floor(ROWS / 2);
+        const plantKeys = new Set(plants.map((p) => `${p.row},${p.col}`));
+        const topHalf = afterWalls.filter(function (c) {
+            return c.row < Math.floor(ROWS / 2) &&
+                !plantKeys.has(`${c.row},${c.col}`);
         });
         const zombies = topHalf.slice(0, nZombies).map(function (c, i) {
             return {id: `z${i + 1}`, row: c.row, col: c.col};
@@ -404,9 +441,9 @@ const createCampaignGame = function (difficulty, seed) {
     return Object.assign({}, base, {
         mode: "campaign",
         difficulty: level,
-        plants: assignRandomPlantSkins(plants, rng),
+        plants,
         walls,
-        zombies: assignZombieSkins(zombies, level, rng)
+        zombies
     });
 };
 
@@ -462,35 +499,35 @@ const getBoardSize = (state) => ({rows: state.rows, cols: state.cols});
  * @param {GameState} state - State to inspect.
  * @returns {Position} Dave's position.
  */
-const getDave = (state) => state.dave;
+const getDave = (state) => copyPosition(state.dave);
 
 /**
  * Returns all plant positions.
  * @param {GameState} state - State to inspect.
  * @returns {Plant[]} Plants in the current state.
  */
-const getPlants = (state) => state.plants;
+const getPlants = (state) => state.plants.map(copyUnit);
 
 /**
  * Returns all zombie positions.
  * @param {GameState} state - State to inspect.
  * @returns {Zombie[]} Zombies in the current state.
  */
-const getZombies = (state) => state.zombies;
+const getZombies = (state) => state.zombies.map(copyUnit);
 
 /**
  * Returns all wall positions.
  * @param {GameState} state - State to inspect.
  * @returns {Position[]} Walls in the current state.
  */
-const getWalls = (state) => state.walls;
+const getWalls = (state) => state.walls.map(copyPosition);
 
 /**
  * Returns the exit position.
  * @param {GameState} state - State to inspect.
  * @returns {Position} Exit position.
  */
-const getExit = (state) => state.exit;
+const getExit = (state) => copyPosition(state.exit);
 
 /**
  * Returns the current game status.
@@ -534,7 +571,7 @@ const getSelectedUnit = (state) => state.selectedUnitId;
  */
 const getSelectableUnits = function (state) {
     const daveUnit = {id: "dave", row: state.dave.row, col: state.dave.col};
-    return [daveUnit].concat(state.plants);
+    return [daveUnit].concat(state.plants.map(copyUnit));
 };
 
 /**
@@ -787,11 +824,19 @@ const moveZombies = function (state) {
         status: "playing"
     });
 
+    const selectedUnitId = (
+        state.selectedUnitId === "dave" ||
+        result.plants.some((plant) => plant.id === state.selectedUnitId)
+        ? state.selectedUnitId
+        : "dave"
+    );
+
     return Object.assign({}, state, {
         zombies: result.zombies,
         plants: result.plants,
         walls: result.walls,
         status: result.status,
+        selectedUnitId,
         turn: "player"
     });
 };

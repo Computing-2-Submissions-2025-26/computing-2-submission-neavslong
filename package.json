@@ -6,6 +6,7 @@
   "main": "web-app/game.js",
   "scripts": {
     "docs": "jsdoc -c jsdoc.json",
+    "lint": "node --check web-app/game.js && node --check web-app/main.js && node --check web-app/mode2-visuals.js && node --check web-app/tests/game.test.js && node --check web-app/tests/giant-zombie.test.js && node --check web-app/tests/mode2-visuals.test.js",
     "test": "mocha"
   },
   "author": "",

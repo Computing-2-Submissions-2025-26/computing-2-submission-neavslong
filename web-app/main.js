@@ -10,31 +10,22 @@ import {
     getExit,
     getMoveCount,
     getDifficulty,
-    moveDave,
+    getSelectedUnit,
+    selectUnit,
+    moveSelectedUnit,
     resetGame,
     isWon,
     isLost
 } from "./game.js";
 import {
     MODE2_DIFFICULTY_CONFIG,
+    assignRandomPlantSkins,
+    assignZombieSkins,
     getPlantSkin,
     getZombieAsset
 } from "./mode2-visuals.js";
 
 const STREAK_KEY = "davesEscapeRandomStreak";
-const CHEAT_CODE = [
-    "ArrowUp",
-    "ArrowUp",
-    "ArrowDown",
-    "ArrowDown",
-    "ArrowLeft",
-    "ArrowRight",
-    "ArrowLeft",
-    "ArrowRight",
-    "b",
-    "a"
-];
-
 const homeScreenEl = document.getElementById("home-screen");
 const campaignScreenEl = document.getElementById("campaign-screen");
 const gameScreenEl = document.getElementById("game-screen");
@@ -48,23 +39,30 @@ const homeStreakEl = document.getElementById("home-streak");
 const gameStreakEl = document.getElementById("game-streak");
 const streakDisplayEl = document.getElementById("streak-display");
 const difficultyDisplayEl = document.getElementById("difficulty-display");
+const campaignProgressEl = document.getElementById("campaign-progress");
 const modeRulesEl = document.getElementById("mode-rules");
 const resetEl = document.getElementById("reset");
 const resetTextEl = document.getElementById("reset-text");
 const campaignTotalMovesEl = document.getElementById("campaign-total-moves");
 const winOverlayEl = document.getElementById("win-overlay");
 const loseOverlayEl = document.getElementById("lose-overlay");
+const winTitleEl = document.getElementById("win-title");
+const winSubtitleEl = document.getElementById("win-subtitle");
+const winContinueEl = document.getElementById("win-continue");
+const loseTitleEl = document.getElementById("lose-title");
+const loseSummaryEl = document.getElementById("lose-summary");
+const loseRetryEl = document.getElementById("lose-retry");
 
 let state = createGame();
 let recordedResult = null;
 let currentMode = "random";
+let lastRandomStreak = 0;
 let campaignDifficulty = 1;
 let difficultyOneWins = 0;
 let campaignTotalMoves = 0;
 let campaignAction = "restart";
 let nextCampaignDifficulty = 1;
 let campaignComplete = false;
-let cheatCodeIndex = 0;
 
 function loadStreak() {
     try {
@@ -90,13 +88,22 @@ function renderStreak() {
     gameStreakEl.textContent = winStreak;
 }
 
+function setScreen(screenName) {
+    document.body.classList.toggle("is-playing", screenName !== "home");
+    homeScreenEl.hidden = screenName !== "home";
+    gameScreenEl.hidden = screenName !== "game";
+    campaignScreenEl.hidden = screenName !== "campaign-complete";
+}
+
 function recordResult() {
     if (recordedResult !== null) { return; }
     if (currentMode === "random" && isWon(state)) {
         winStreak += 1;
+        lastRandomStreak = winStreak;
         recordedResult = "won";
         saveStreak();
     } else if (currentMode === "random" && isLost(state)) {
+        lastRandomStreak = winStreak;
         winStreak = 0;
         recordedResult = "lost";
         saveStreak();
@@ -114,7 +121,7 @@ function recordResult() {
         campaignAction = "continue";
     } else if (currentMode === "campaign" && isLost(state)) {
         recordedResult = "lost";
-        campaignAction = "restart";
+        campaignAction = "retry";
     }
 }
 
@@ -124,6 +131,16 @@ function makePiece(src, className, alt, skinClass = "") {
     piece.alt = alt;
     piece.className = `piece ${className} ${skinClass}`.trim();
     return piece;
+}
+
+function decorateCampaignState(gameState) {
+    return Object.assign({}, gameState, {
+        plants: assignRandomPlantSkins(getPlants(gameState)),
+        zombies: assignZombieSkins(
+            getZombies(gameState),
+            getDifficulty(gameState)
+        )
+    });
 }
 
 function configureScene() {
@@ -150,6 +167,7 @@ function render() {
     const zombies = getZombies(state);
     const walls = getWalls(state);
     const isCampaign = currentMode === "campaign";
+    const selectedUnitId = getSelectedUnit(state);
 
     configureScene();
     boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
@@ -162,7 +180,12 @@ function render() {
         cell.setAttribute("role", "gridcell");
 
         if (r === dave.row && c === dave.col) {
-            cell.className = "cell dave selected";
+            cell.className = (
+                selectedUnitId === "dave" ? "cell dave selected" : "cell dave"
+            );
+            cell.dataset.unitId = "dave";
+            cell.tabIndex = 0;
+            cell.setAttribute("aria-selected", selectedUnitId === "dave");
             cell.append(makePiece(
                 (
                     isCampaign
@@ -192,7 +215,14 @@ function render() {
         } else if (plants.some((p) => p.row === r && p.col === c)) {
             const plant = plants.find((p) => p.row === r && p.col === c);
             const plantSkin = getPlantSkin(plant.skinId);
-            cell.className = "cell plant";
+            cell.className = (
+                selectedUnitId === plant.id
+                ? "cell plant selected"
+                : "cell plant"
+            );
+            cell.dataset.unitId = plant.id;
+            cell.tabIndex = 0;
+            cell.setAttribute("aria-selected", selectedUnitId === plant.id);
             cell.append(makePiece(
                 (
                     isCampaign
@@ -262,31 +292,25 @@ function render() {
     recordResult();
     renderStreak();
     setGameModeDetails();
+    renderCampaignProgress();
+    renderEndOverlay();
 
     if (isWon(state)) {
         statusTextEl.textContent = (
             currentMode === "random"
-            ? `You escaped! Win streak: ${winStreak}.`
-            : campaignWinMessage()
+            ? `You escaped! Win streak: ${winStreak}. Press Space for the next challenge.`
+            : `${campaignWinMessage()} ${nextLevelHint()}`
         );
         statusIconEl.textContent = "☀";
         statusEl.className = "status won hud-panel";
-        if (currentMode === "campaign") {
-            winOverlayEl.hidden = false;
-            loseOverlayEl.hidden = true;
-        }
     } else if (isLost(state)) {
         statusTextEl.textContent = (
             currentMode === "campaign"
-            ? "Campaign run ended. Restart from difficulty 1."
+            ? `Difficulty ${campaignDifficulty} failed. Retry this checkpoint.`
             : "The zombies caught Dave! Game over."
         );
         statusIconEl.textContent = "🧠";
         statusEl.className = "status lost hud-panel";
-        if (currentMode === "campaign") {
-            loseOverlayEl.hidden = false;
-            winOverlayEl.hidden = true;
-        }
     } else {
         statusTextEl.textContent = "Playing - guide Dave to the exit!";
         statusIconEl.textContent = "🍃";
@@ -294,9 +318,47 @@ function render() {
     }
 }
 
-function hideMode2Overlays() {
+function hideEndOverlays() {
     winOverlayEl.hidden = true;
     loseOverlayEl.hidden = true;
+}
+
+function renderEndOverlay() {
+    if (isWon(state)) {
+        loseOverlayEl.hidden = true;
+        winOverlayEl.hidden = false;
+        if (currentMode === "random") {
+            winTitleEl.textContent = "Challenge Complete!";
+            winSubtitleEl.textContent = `Win streak: ${winStreak}. Press Space for the next challenge.`;
+            winContinueEl.textContent = "Next challenge";
+        } else {
+            winTitleEl.textContent = "Level Complete!";
+            winSubtitleEl.textContent = `${campaignWinMessage()} ${nextLevelHint()}`;
+            winContinueEl.textContent = (
+                campaignComplete ? "View campaign result" : "Continue"
+            );
+        }
+    } else if (isLost(state)) {
+        winOverlayEl.hidden = true;
+        loseOverlayEl.hidden = false;
+        if (currentMode === "random") {
+            loseTitleEl.innerHTML = "STREAK<br>ENDED!";
+            loseSummaryEl.textContent = (
+                lastRandomStreak === 0
+                ? "The zombies caught Dave before a streak could start."
+                : lastRandomStreak === 1
+                ? "You escaped once before the zombies caught Dave."
+                : `You escaped ${lastRandomStreak} times before the zombies caught Dave.`
+            );
+            loseRetryEl.textContent = "New challenge";
+        } else {
+            loseTitleEl.innerHTML = "COMPUTING 2<br>ATE YOUR TOKENS!";
+            loseSummaryEl.textContent = `Retry difficulty ${campaignDifficulty}.`;
+            loseRetryEl.textContent = "Try Again";
+        }
+    } else {
+        hideEndOverlays();
+    }
 }
 
 function campaignWinMessage() {
@@ -309,18 +371,26 @@ function campaignWinMessage() {
     return `Difficulty ${campaignDifficulty} cleared!`;
 }
 
+function nextLevelHint() {
+    return campaignComplete
+        ? "Press Space to view your campaign result."
+        : "Press Space for the next level.";
+}
+
 function setGameModeDetails() {
     const difficulty = getDifficulty(state);
+    const turnRule = "Every valid Dave or plant move gives zombies a turn.";
     const campaignRules = {
-        1: "Two normal zombies. Plants destroy zombies that enter them.",
-        2: "Three normal zombies. Plants destroy zombies that enter them.",
-        3: "Two crushers. A plant is destroyed and stops the zombie for one turn.",
-        4: "Three jumpers. Each zombie can leap over one plant once.",
-        5: "Two giant 2×2 zombies. They destroy plants and walls in their path."
+        1: `${turnRule} Two normal zombies. Plants destroy zombies that enter them.`,
+        2: `${turnRule} Three normal zombies. Plants destroy zombies that enter them.`,
+        3: `${turnRule} Two crushers. A plant is destroyed and stops the zombie for one turn.`,
+        4: `${turnRule} Three jumpers. Each zombie can leap over one plant once.`,
+        5: `${turnRule} Two giant 2×2 zombies. They destroy plants and walls in their path.`
     };
     const isCampaign = currentMode === "campaign";
     streakDisplayEl.hidden = isCampaign;
     difficultyDisplayEl.hidden = !isCampaign;
+    campaignProgressEl.hidden = !isCampaign;
     difficultyDisplayEl.textContent = (
         isCampaign
         ? (
@@ -333,7 +403,7 @@ function setGameModeDetails() {
     modeRulesEl.textContent = (
         isCampaign
         ? campaignRules[difficulty]
-        : "Zombies die when they move into plants. Walls block movement."
+        : `${turnRule} Put plants into zombie paths. Walls block movement. Dave loses when a zombie reaches an adjacent space.`
     );
     if (!isCampaign) {
         resetTextEl.textContent = "New challenge";
@@ -342,10 +412,33 @@ function setGameModeDetails() {
             difficulty === 5 ? "View campaign result" : "Continue campaign"
         );
     } else if (isLost(state)) {
-        resetTextEl.textContent = "Restart campaign";
+        resetTextEl.textContent = `Retry difficulty ${campaignDifficulty}`;
     } else {
-        resetTextEl.textContent = "Restart campaign";
+        resetTextEl.textContent = `Retry difficulty ${campaignDifficulty}`;
     }
+}
+
+function renderCampaignProgress() {
+    const isCampaign = currentMode === "campaign";
+    if (!isCampaign) { return; }
+    campaignProgressEl.querySelectorAll("li").forEach(function (step) {
+        const level = Number(step.dataset.step);
+        step.className = "";
+        step.removeAttribute("aria-current");
+        if (level < campaignDifficulty) {
+            step.classList.add("complete");
+        } else if (level === campaignDifficulty) {
+            step.classList.add("current");
+            step.setAttribute("aria-current", "step");
+        } else {
+            step.classList.add("locked");
+        }
+        if (level === 1 && difficultyOneWins === 1 && campaignDifficulty === 1) {
+            step.textContent = "D1 1/2";
+        } else {
+            step.textContent = `D${level}`;
+        }
+    });
 }
 
 function animateBoard(className) {
@@ -354,62 +447,57 @@ function animateBoard(className) {
     boardEl.classList.add(className);
 }
 
-function clearCurrentCampaignLevel() {
-    state = Object.assign({}, state, {
-        status: "won",
-        turn: "player"
-    });
-    recordedResult = null;
-    render();
+function handleWinContinue() {
+    hideEndOverlays();
+    if (currentMode === "campaign") {
+        continueCampaign();
+    } else {
+        startRandomChallenge();
+    }
 }
 
-function trackCheatCode(key) {
-    const expected = CHEAT_CODE[cheatCodeIndex];
-    if (key === expected) {
-        cheatCodeIndex += 1;
+function handleLoseRetry() {
+    hideEndOverlays();
+    if (currentMode === "campaign") {
+        startCampaign(campaignDifficulty);
     } else {
-        cheatCodeIndex = key === CHEAT_CODE[0] ? 1 : 0;
+        startRandomChallenge();
     }
-
-    if (cheatCodeIndex === CHEAT_CODE.length) {
-        cheatCodeIndex = 0;
-        return true;
-    }
-    return false;
 }
 
 function handleDirection(dir) {
     if (gameScreenEl.hidden) { return; }
-    const nextState = moveDave(state, dir);
+    const nextState = moveSelectedUnit(state, dir);
     animateBoard(nextState === state ? "invalid-move" : "successful-move");
+    state = nextState;
+    render();
+}
+
+function handleSelectUnit(unitId) {
+    const nextState = selectUnit(state, unitId);
+    if (nextState === state) { return; }
     state = nextState;
     render();
 }
 
 function startRandomChallenge() {
     currentMode = "random";
-    cheatCodeIndex = 0;
     state = resetGame();
-    hideMode2Overlays();
+    hideEndOverlays();
     recordedResult = null;
-    homeScreenEl.hidden = true;
-    campaignScreenEl.hidden = true;
-    gameScreenEl.hidden = false;
+    setScreen("game");
     setGameModeDetails();
     render();
 }
 
 function startCampaign(difficulty) {
     currentMode = "campaign";
-    cheatCodeIndex = 0;
-    state = createCampaignGame(difficulty);
-    hideMode2Overlays();
+    state = decorateCampaignState(createCampaignGame(difficulty));
+    hideEndOverlays();
     campaignDifficulty = difficulty;
     recordedResult = null;
     campaignAction = "restart";
-    homeScreenEl.hidden = true;
-    campaignScreenEl.hidden = true;
-    gameScreenEl.hidden = false;
+    setScreen("game");
     setGameModeDetails();
     render();
 }
@@ -426,19 +514,15 @@ function startNewCampaign() {
 function continueCampaign() {
     if (campaignComplete) {
         campaignTotalMovesEl.textContent = campaignTotalMoves;
-        gameScreenEl.hidden = true;
-        campaignScreenEl.hidden = false;
+        setScreen("campaign-complete");
         return;
     }
     startCampaign(nextCampaignDifficulty);
 }
 
 function showMainMenu() {
-    cheatCodeIndex = 0;
-    hideMode2Overlays();
-    gameScreenEl.hidden = true;
-    campaignScreenEl.hidden = true;
-    homeScreenEl.hidden = false;
+    hideEndOverlays();
+    setScreen("home");
     renderStreak();
 }
 
@@ -463,14 +547,10 @@ document.getElementById("campaign-restart").addEventListener(
 );
 
 document.getElementById("win-continue").addEventListener("click", function () {
-    hideMode2Overlays();
-    continueCampaign();
+    handleWinContinue();
 });
 
-document.getElementById("lose-retry").addEventListener("click", function () {
-    hideMode2Overlays();
-    startNewCampaign();
-});
+loseRetryEl.addEventListener("click", handleLoseRetry);
 
 document.getElementById("home-title").addEventListener("click", showMainMenu);
 
@@ -482,12 +562,27 @@ document.querySelectorAll("[data-dir]").forEach(function (btn) {
     });
 });
 
+boardEl.addEventListener("click", function (event) {
+    const cell = event.target.closest("[data-unit-id]");
+    if (!cell || !boardEl.contains(cell)) { return; }
+    handleSelectUnit(cell.dataset.unitId);
+});
+
+boardEl.addEventListener("keydown", function (event) {
+    const cell = event.target.closest("[data-unit-id]");
+    if (!cell || !boardEl.contains(cell)) { return; }
+    if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        handleSelectUnit(cell.dataset.unitId);
+    }
+});
+
 resetEl.addEventListener("click", function () {
     if (currentMode === "campaign") {
         if (campaignAction === "continue") {
             continueCampaign();
         } else {
-            startNewCampaign();
+            startCampaign(campaignDifficulty);
         }
     } else {
         startRandomChallenge();
@@ -502,25 +597,13 @@ const KEY_MAP = {
 };
 
 document.addEventListener("keydown", function (e) {
-    const cheatKey = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-    if (
-        currentMode === "campaign" &&
-        !gameScreenEl.hidden &&
-        !isWon(state) &&
-        trackCheatCode(cheatKey)
-    ) {
-        e.preventDefault();
-        clearCurrentCampaignLevel();
-        return;
-    }
-
     if (e.code === "Space" && !e.repeat && homeScreenEl.hidden) {
         e.preventDefault();
         if (currentMode === "campaign") {
             if (campaignAction === "continue") {
                 continueCampaign();
             } else {
-                startNewCampaign();
+                startCampaign(campaignDifficulty);
             }
         } else {
             startRandomChallenge();
