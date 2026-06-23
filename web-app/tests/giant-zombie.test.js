@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {canMoveDave} from "../game.js";
 
 describe("giant zombie collision", function () {
-    it("prevents Dave entering any cell in a giant zombie's 2x2 footprint", function () {
+    it("prevents Dave entering a giant zombie footprint", function () {
         const state = {
             rows: 8,
             cols: 8,

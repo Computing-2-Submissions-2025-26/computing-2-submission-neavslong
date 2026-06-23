@@ -16,27 +16,27 @@ const ZOMBIE_SKINS = {
 };
 
 const MODE2_DIFFICULTY_CONFIG = {
-    1: {
+    "1": {
         background: "assets/backgrounds/bg-day-house.svg",
         zombieSkins: ["basic", "cone"],
         requireAllZombieSkins: true
     },
-    2: {
+    "2": {
         background: "assets/backgrounds/bg-night-house.svg",
         zombieSkins: ["basic", "cone"],
         requireAllZombieSkins: true
     },
-    3: {
+    "3": {
         background: "assets/backgrounds/bg-pool-day.svg",
         zombieSkins: ["newspaper", "football"],
         requireAllZombieSkins: true
     },
-    4: {
+    "4": {
         background: "assets/backgrounds/bg-roof-day.svg",
         zombieSkins: ["polevault"],
         requireAllZombieSkins: false
     },
-    5: {
+    "5": {
         background: "assets/backgrounds/bg-egypt-day.svg",
         zombieSkins: ["gargantuar"],
         requireAllZombieSkins: false
@@ -53,7 +53,9 @@ const shuffled = function (items, random) {
 };
 
 const assignRandomPlantSkins = function (plants, random = Math.random) {
-    if (plants.length === 0) { return []; }
+    if (plants.length === 0) {
+        return [];
+    }
     const variety = Math.min(plants.length, 3, PLANT_SKINS.length);
     const guaranteed = shuffled(PLANT_SKINS, random).slice(0, variety);
     return plants.map(function (plant, index) {
@@ -71,8 +73,10 @@ const assignZombieSkins = function (
     difficulty,
     random = Math.random
 ) {
-    const config = MODE2_DIFFICULTY_CONFIG[difficulty] ||
-        MODE2_DIFFICULTY_CONFIG[1];
+    const config = (
+        MODE2_DIFFICULTY_CONFIG[difficulty] ||
+        MODE2_DIFFICULTY_CONFIG[1]
+    );
     const required = (
         config.requireAllZombieSkins
         ? shuffled(config.zombieSkins, random)
@@ -94,8 +98,9 @@ const getPlantSkin = function (skinId) {
     return PLANT_SKINS.find((skin) => skin.id === skinId) || PLANT_SKINS[0];
 };
 
-const getZombieAsset = (skinId) =>
-    ZOMBIE_SKINS[skinId] || ZOMBIE_SKINS.basic;
+const getZombieAsset = (skinId) => (
+    ZOMBIE_SKINS[skinId] || ZOMBIE_SKINS.basic
+);
 
 export {
     PLANT_SKINS,

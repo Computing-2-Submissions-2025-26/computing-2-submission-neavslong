@@ -19,7 +19,7 @@ const zombies = [
 ];
 
 describe("Mode 2 visual configuration", function () {
-    it("assigns at least three plant skins when three plants exist", function () {
+    it("assigns at least three plant skins", function () {
         const assigned = assignRandomPlantSkins(plants, zeroRandom);
         assert.ok(new Set(assigned.map((plant) => plant.skinId)).size >= 3);
     });

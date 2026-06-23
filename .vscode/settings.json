@@ -1,0 +1,12 @@
+{
+    "jslint.version": "es6",
+    "jslint.options": {
+        "browser": true,
+        "devel": true,
+        "node": true,
+        "predef": ["describe", "it"]
+    },
+    "jslint.exclude": {
+        "**/node_modules/**": true
+    }
+}

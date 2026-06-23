@@ -29,6 +29,7 @@ const STREAK_KEY = "davesEscapeRandomStreak";
 const homeScreenEl = document.getElementById("home-screen");
 const campaignScreenEl = document.getElementById("campaign-screen");
 const gameScreenEl = document.getElementById("game-screen");
+const siteHeaderEl = document.querySelector(".site-header");
 const mode2SceneEl = document.getElementById("mode2-scene");
 const boardEl = document.getElementById("board");
 const statusEl = document.getElementById("status");
@@ -63,11 +64,23 @@ let campaignTotalMoves = 0;
 let campaignAction = "restart";
 let nextCampaignDifficulty = 1;
 let campaignComplete = false;
+let renderEndOverlay;
+let campaignWinMessage;
+let nextLevelHint;
+let setGameModeDetails;
+let renderCampaignProgress;
+let startRandomChallenge;
+let startCampaign;
+let continueCampaign;
 
 function loadStreak() {
     try {
         const stored = Number.parseInt(localStorage.getItem(STREAK_KEY), 10);
-        return Number.isFinite(stored) && stored >= 0 ? stored : 0;
+        return (
+            (Number.isFinite(stored) && stored >= 0)
+            ? stored
+            : 0
+        );
     } catch (ignore) {
         return 0;
     }
@@ -96,7 +109,9 @@ function setScreen(screenName) {
 }
 
 function recordResult() {
-    if (recordedResult !== null) { return; }
+    if (recordedResult !== null) {
+        return;
+    }
     if (currentMode === "random" && isWon(state)) {
         winStreak += 1;
         lastRandomStreak = winStreak;
@@ -127,9 +142,10 @@ function recordResult() {
 
 function makePiece(src, className, alt, skinClass = "") {
     const piece = document.createElement("img");
+    const pieceClassName = "piece " + className + " " + skinClass;
     piece.src = src;
     piece.alt = alt;
-    piece.className = `piece ${className} ${skinClass}`.trim();
+    piece.className = pieceClassName.trim();
     return piece;
 }
 
@@ -170,8 +186,8 @@ function render() {
     const selectedUnitId = getSelectedUnit(state);
 
     configureScene();
-    boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-    boardEl.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+    boardEl.style.setProperty("--board-cols", cols);
+    boardEl.style.setProperty("--board-rows", rows);
 
     const cells = Array.from({length: rows * cols}).map(function (ignore, i) {
         const r = Math.floor(i / cols);
@@ -181,7 +197,9 @@ function render() {
 
         if (r === dave.row && c === dave.col) {
             cell.className = (
-                selectedUnitId === "dave" ? "cell dave selected" : "cell dave"
+                selectedUnitId === "dave"
+                ? "cell dave selected"
+                : "cell dave"
             );
             cell.dataset.unitId = "dave";
             cell.tabIndex = 0;
@@ -200,10 +218,16 @@ function render() {
             cell.className = "cell exit exit-tile";
             cell.setAttribute("aria-label", `Exit at row ${r} col ${c}`);
         } else if (walls.some((w) => w.row === r && w.col === c)) {
-            const cactusWall = isCampaign &&
+            const cactusWall = (
+                isCampaign &&
                 getDifficulty(state) === 5 &&
-                (r + c) % 2 === 0;
-            cell.className = cactusWall ? "cell wall cactus-wall" : "cell wall";
+                (r + c) % 2 === 0
+            );
+            cell.className = (
+                cactusWall
+                ? "cell wall cactus-wall"
+                : "cell wall"
+            );
             if (cactusWall) {
                 cell.append(makePiece(
                     "assets/characters/plants/cactus-wall.svg",
@@ -231,27 +255,41 @@ function render() {
                 ),
                 "piece-plant",
                 "Friendly plant",
-                isCampaign ? `skin-plant-${plantSkin.id}` : ""
+                (
+                    isCampaign
+                    ? `skin-plant-${plantSkin.id}`
+                    : ""
+                )
             ));
             cell.setAttribute("aria-label", `Plant at row ${r} col ${c}`);
         } else if (zombies.some(function (z) {
             const size = z.size || 1;
-            return r >= z.row && r < z.row + size &&
-                c >= z.col && c < z.col + size;
+            return (
+                r >= z.row && r < z.row + size &&
+                c >= z.col && c < z.col + size
+            );
         })) {
             const zombie = zombies.find(function (z) {
                 const size = z.size || 1;
-                return r >= z.row && r < z.row + size &&
-                    c >= z.col && c < z.col + size;
+                return (
+                    r >= z.row && r < z.row + size &&
+                    c >= z.col && c < z.col + size
+                );
             });
             const giant = (zombie.size || 1) === 2;
-            const giantAnchor = giant &&
+            const giantAnchor = (
+                giant &&
                 r === zombie.row &&
-                c === zombie.col;
+                c === zombie.col
+            );
             cell.className = (
                 giant
                 ? `cell giant-zombie ${
-                    giantAnchor ? "giant-anchor" : "giant-body"
+                    (
+                        giantAnchor
+                        ? "giant-anchor"
+                        : "giant-body"
+                    )
                 }`
                 : "cell zombie"
             );
@@ -263,13 +301,26 @@ function render() {
                         : "assets/zombie-token.svg"
                     ),
                     "piece-zombie",
-                    giant ? "Giant zombie" : "Zombie",
-                    isCampaign ? `skin-zombie-${zombie.skinId}` : ""
+                    (
+                        giant
+                        ? "Giant zombie"
+                        : "Zombie"
+                    ),
+                    (
+                        isCampaign
+                        ? `skin-zombie-${zombie.skinId}`
+                        : ""
+                    )
                 ));
             }
+            const zombieLabel = (
+                giant
+                ? "Giant zombie"
+                : "Zombie"
+            );
             cell.setAttribute(
                 "aria-label",
-                `${giant ? "Giant zombie" : "Zombie"} at row ${r} col ${c}`
+                `${zombieLabel} at row ${r} col ${c}`
             );
         } else {
             cell.className = "cell empty";
@@ -278,15 +329,28 @@ function render() {
 
         if (isCampaign && getDifficulty(state) === 3 && (r === 3 || r === 4)) {
             cell.classList.add("pool-cell");
-            if (cell.classList.contains("dave") ||
-                    cell.classList.contains("zombie")) {
+            if (
+                cell.classList.contains("dave") ||
+                cell.classList.contains("zombie")
+            ) {
                 cell.classList.add("swimming-piece");
             }
         }
         return cell;
     });
 
-    boardEl.replaceChildren(...cells);
+    const boardRows = Array.from(
+        new Array(rows).keys()
+    ).map(function (rowIndex) {
+        const rowEl = document.createElement("div");
+        const firstCell = rowIndex * cols;
+        rowEl.className = "board-row";
+        rowEl.setAttribute("role", "row");
+        rowEl.append(...cells.slice(firstCell, firstCell + cols));
+        return rowEl;
+    });
+
+    boardEl.replaceChildren(...boardRows);
 
     moveCountEl.textContent = getMoveCount(state);
     recordResult();
@@ -298,7 +362,10 @@ function render() {
     if (isWon(state)) {
         statusTextEl.textContent = (
             currentMode === "random"
-            ? `You escaped! Win streak: ${winStreak}. Press Space for the next challenge.`
+            ? (
+                `You escaped! Win streak: ${winStreak}. ` +
+                "Press Space for the next challenge."
+            )
             : `${campaignWinMessage()} ${nextLevelHint()}`
         );
         statusIconEl.textContent = "☀";
@@ -321,26 +388,51 @@ function render() {
 function hideEndOverlays() {
     winOverlayEl.hidden = true;
     loseOverlayEl.hidden = true;
+    gameScreenEl.inert = false;
+    siteHeaderEl.inert = false;
 }
 
-function renderEndOverlay() {
+function showEndOverlay(overlay, actionButton) {
+    const isOpening = overlay.hidden;
+    overlay.hidden = false;
+    gameScreenEl.inert = true;
+    siteHeaderEl.inert = true;
+    if (isOpening) {
+        actionButton.focus();
+    }
+}
+
+function focusSelectedUnit() {
+    const selectedCell = boardEl.querySelector("[aria-selected=\"true\"]");
+    if (selectedCell) {
+        selectedCell.focus();
+    }
+}
+
+renderEndOverlay = function () {
     if (isWon(state)) {
         loseOverlayEl.hidden = true;
-        winOverlayEl.hidden = false;
         if (currentMode === "random") {
             winTitleEl.textContent = "Challenge Complete!";
-            winSubtitleEl.textContent = `Win streak: ${winStreak}. Press Space for the next challenge.`;
+            winSubtitleEl.textContent = (
+                `Win streak: ${winStreak}. ` +
+                "Press Space for the next challenge."
+            );
             winContinueEl.textContent = "Next challenge";
         } else {
             winTitleEl.textContent = "Level Complete!";
-            winSubtitleEl.textContent = `${campaignWinMessage()} ${nextLevelHint()}`;
+            winSubtitleEl.textContent = (
+                `${campaignWinMessage()} ${nextLevelHint()}`
+            );
             winContinueEl.textContent = (
-                campaignComplete ? "View campaign result" : "Continue"
+                campaignComplete
+                ? "View campaign result"
+                : "Continue"
             );
         }
+        showEndOverlay(winOverlayEl, winContinueEl);
     } else if (isLost(state)) {
         winOverlayEl.hidden = true;
-        loseOverlayEl.hidden = false;
         if (currentMode === "random") {
             loseTitleEl.innerHTML = "STREAK<br>ENDED!";
             loseSummaryEl.textContent = (
@@ -348,20 +440,26 @@ function renderEndOverlay() {
                 ? "The zombies caught Dave before a streak could start."
                 : lastRandomStreak === 1
                 ? "You escaped once before the zombies caught Dave."
-                : `You escaped ${lastRandomStreak} times before the zombies caught Dave.`
+                : (
+                    `You escaped ${lastRandomStreak} times before ` +
+                    "the zombies caught Dave."
+                )
             );
             loseRetryEl.textContent = "New challenge";
         } else {
             loseTitleEl.innerHTML = "COMPUTING 2<br>ATE YOUR TOKENS!";
-            loseSummaryEl.textContent = `Retry difficulty ${campaignDifficulty}.`;
+            loseSummaryEl.textContent = (
+                `Retry difficulty ${campaignDifficulty}.`
+            );
             loseRetryEl.textContent = "Try Again";
         }
+        showEndOverlay(loseOverlayEl, loseRetryEl);
     } else {
         hideEndOverlays();
     }
-}
+};
 
-function campaignWinMessage() {
+campaignWinMessage = function () {
     if (campaignDifficulty === 1 && difficultyOneWins < 2) {
         return "Difficulty 1 cleared once. Clear it one more time.";
     }
@@ -369,23 +467,40 @@ function campaignWinMessage() {
         return "Difficulty 5 cleared. Campaign complete!";
     }
     return `Difficulty ${campaignDifficulty} cleared!`;
-}
+};
 
-function nextLevelHint() {
-    return campaignComplete
+nextLevelHint = function () {
+    return (
+        campaignComplete
         ? "Press Space to view your campaign result."
-        : "Press Space for the next level.";
-}
+        : "Press Space for the next level."
+    );
+};
 
-function setGameModeDetails() {
+setGameModeDetails = function () {
     const difficulty = getDifficulty(state);
     const turnRule = "Every valid Dave or plant move gives zombies a turn.";
     const campaignRules = {
-        1: `${turnRule} Two normal zombies. Plants destroy zombies that enter them.`,
-        2: `${turnRule} Three normal zombies. Plants destroy zombies that enter them.`,
-        3: `${turnRule} Two crushers. A plant is destroyed and stops the zombie for one turn.`,
-        4: `${turnRule} Three jumpers. Each zombie can leap over one plant once.`,
-        5: `${turnRule} Two giant 2×2 zombies. They destroy plants and walls in their path.`
+        "1": (
+            `${turnRule} Two normal zombies. ` +
+            "Plants destroy zombies that enter them."
+        ),
+        "2": (
+            `${turnRule} Three normal zombies. ` +
+            "Plants destroy zombies that enter them."
+        ),
+        "3": (
+            `${turnRule} Two crushers. ` +
+            "A plant is destroyed and stops the zombie for one turn."
+        ),
+        "4": (
+            `${turnRule} Three jumpers. ` +
+            "Each zombie can leap over one plant once."
+        ),
+        "5": (
+            `${turnRule} Two giant 2×2 zombies. ` +
+            "They destroy plants and walls in their path."
+        )
     };
     const isCampaign = currentMode === "campaign";
     streakDisplayEl.hidden = isCampaign;
@@ -403,24 +518,32 @@ function setGameModeDetails() {
     modeRulesEl.textContent = (
         isCampaign
         ? campaignRules[difficulty]
-        : `${turnRule} Put plants into zombie paths. Walls block movement. Dave loses when a zombie reaches an adjacent space.`
+        : (
+            `${turnRule} Put plants into zombie paths. ` +
+            "Walls block movement. Dave loses when a zombie reaches " +
+            "an adjacent space."
+        )
     );
     if (!isCampaign) {
         resetTextEl.textContent = "New challenge";
     } else if (isWon(state)) {
         resetTextEl.textContent = (
-            difficulty === 5 ? "View campaign result" : "Continue campaign"
+            difficulty === 5
+            ? "View campaign result"
+            : "Continue campaign"
         );
     } else if (isLost(state)) {
         resetTextEl.textContent = `Retry difficulty ${campaignDifficulty}`;
     } else {
         resetTextEl.textContent = `Retry difficulty ${campaignDifficulty}`;
     }
-}
+};
 
-function renderCampaignProgress() {
+renderCampaignProgress = function () {
     const isCampaign = currentMode === "campaign";
-    if (!isCampaign) { return; }
+    if (!isCampaign) {
+        return;
+    }
     campaignProgressEl.querySelectorAll("li").forEach(function (step) {
         const level = Number(step.dataset.step);
         step.className = "";
@@ -433,17 +556,21 @@ function renderCampaignProgress() {
         } else {
             step.classList.add("locked");
         }
-        if (level === 1 && difficultyOneWins === 1 && campaignDifficulty === 1) {
+        if (
+            level === 1 &&
+            difficultyOneWins === 1 &&
+            campaignDifficulty === 1
+        ) {
             step.textContent = "D1 1/2";
         } else {
             step.textContent = `D${level}`;
         }
     });
-}
+};
 
 function animateBoard(className) {
     boardEl.classList.remove("invalid-move", "successful-move");
-    void boardEl.offsetWidth;
+    boardEl.getBoundingClientRect();
     boardEl.classList.add(className);
 }
 
@@ -466,21 +593,30 @@ function handleLoseRetry() {
 }
 
 function handleDirection(dir) {
-    if (gameScreenEl.hidden) { return; }
+    if (gameScreenEl.hidden) {
+        return;
+    }
     const nextState = moveSelectedUnit(state, dir);
-    animateBoard(nextState === state ? "invalid-move" : "successful-move");
+    const animationClass = (
+        nextState === state
+        ? "invalid-move"
+        : "successful-move"
+    );
+    animateBoard(animationClass);
     state = nextState;
     render();
 }
 
 function handleSelectUnit(unitId) {
     const nextState = selectUnit(state, unitId);
-    if (nextState === state) { return; }
+    if (nextState === state) {
+        return;
+    }
     state = nextState;
     render();
 }
 
-function startRandomChallenge() {
+startRandomChallenge = function () {
     currentMode = "random";
     state = resetGame();
     hideEndOverlays();
@@ -488,9 +624,10 @@ function startRandomChallenge() {
     setScreen("game");
     setGameModeDetails();
     render();
-}
+    focusSelectedUnit();
+};
 
-function startCampaign(difficulty) {
+startCampaign = function (difficulty) {
     currentMode = "campaign";
     state = decorateCampaignState(createCampaignGame(difficulty));
     hideEndOverlays();
@@ -500,7 +637,8 @@ function startCampaign(difficulty) {
     setScreen("game");
     setGameModeDetails();
     render();
-}
+    focusSelectedUnit();
+};
 
 function startNewCampaign() {
     campaignDifficulty = 1;
@@ -511,19 +649,21 @@ function startNewCampaign() {
     startCampaign(1);
 }
 
-function continueCampaign() {
+continueCampaign = function () {
     if (campaignComplete) {
         campaignTotalMovesEl.textContent = campaignTotalMoves;
         setScreen("campaign-complete");
+        document.getElementById("campaign-restart").focus();
         return;
     }
     startCampaign(nextCampaignDifficulty);
-}
+};
 
 function showMainMenu() {
     hideEndOverlays();
     setScreen("home");
     renderStreak();
+    document.getElementById("random-mode").focus();
 }
 
 document.getElementById("random-mode").addEventListener(
@@ -564,13 +704,17 @@ document.querySelectorAll("[data-dir]").forEach(function (btn) {
 
 boardEl.addEventListener("click", function (event) {
     const cell = event.target.closest("[data-unit-id]");
-    if (!cell || !boardEl.contains(cell)) { return; }
+    if (!cell || !boardEl.contains(cell)) {
+        return;
+    }
     handleSelectUnit(cell.dataset.unitId);
 });
 
 boardEl.addEventListener("keydown", function (event) {
     const cell = event.target.closest("[data-unit-id]");
-    if (!cell || !boardEl.contains(cell)) { return; }
+    if (!cell || !boardEl.contains(cell)) {
+        return;
+    }
     if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         handleSelectUnit(cell.dataset.unitId);
@@ -597,6 +741,9 @@ const KEY_MAP = {
 };
 
 document.addEventListener("keydown", function (e) {
+    if (!winOverlayEl.hidden || !loseOverlayEl.hidden) {
+        return;
+    }
     if (e.code === "Space" && !e.repeat && homeScreenEl.hidden) {
         e.preventDefault();
         if (currentMode === "campaign") {

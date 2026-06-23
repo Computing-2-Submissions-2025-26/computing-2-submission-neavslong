@@ -85,6 +85,16 @@ main {
     display: none !important;
 }
 
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
 .screen {
     width: 100%;
 }
@@ -646,6 +656,7 @@ kbd {
     width: 100%;
     aspect-ratio: 1;
     display: grid;
+    grid-template-rows: repeat(var(--board-rows), minmax(0, 1fr));
     gap: var(--board-gap);
     padding: 7px;
     overflow: hidden;
@@ -661,6 +672,13 @@ kbd {
         inset 0 0 0 3px #a17439,
         0 10px 0 #26321c,
         0 17px 26px #0b261f99;
+}
+
+.board-row {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(var(--board-cols), minmax(0, 1fr));
+    gap: var(--board-gap);
 }
 
 .mode2-scene {
@@ -1609,6 +1627,25 @@ button.text-button:not(.back-menu-button):active {
 
     .field-guide {
         font-size: 0.72rem;
+    }
+}
+
+@media (max-height: 26rem) {
+    .win-overlay,
+    .lose-overlay {
+        place-items: start center;
+        align-content: start;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .reward-card,
+    .lose-message {
+        margin-top: 1rem;
+    }
+
+    .lose-actions {
+        margin-bottom: 1rem;
     }
 }
 

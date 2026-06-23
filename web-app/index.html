@@ -10,6 +10,7 @@
 <body>
     <main>
         <header class="site-header game-title">
+            <h1 class="visually-hidden">Dave's Escape</h1>
             <p class="eyebrow">A turn-based escape puzzle</p>
             <button class="home-title" id="home-title" aria-label="Return to main menu">
                 <img
@@ -166,7 +167,6 @@
                     id="board"
                     role="grid"
                     aria-label="Game board"
-                    aria-readonly="true"
                 ></div>
             </div>
 
@@ -186,7 +186,8 @@
         </section>
 
         <section class="win-overlay" id="win-overlay" hidden
-            aria-label="Level complete">
+            role="dialog" aria-modal="true"
+            aria-labelledby="win-title" aria-describedby="win-subtitle">
             <div class="sunburst" aria-hidden="true"></div>
             <img class="reward-card__sparkle sparkle-one"
                 src="assets/ui/sun-sparkle.svg" alt="">
@@ -202,10 +203,11 @@
         </section>
 
         <section class="lose-overlay" id="lose-overlay" hidden
-            aria-label="Game lost">
-            <div class="lose-message lose-message--slime" id="lose-title">
+            role="dialog" aria-modal="true"
+            aria-labelledby="lose-title" aria-describedby="lose-summary">
+            <h2 class="lose-message lose-message--slime" id="lose-title">
                 COMPUTING 2<br>ATE YOUR TOKENS!
-            </div>
+            </h2>
             <p class="lose-summary hud-panel" id="lose-summary"></p>
             <div class="slime-drops" aria-hidden="true"></div>
             <div class="lose-actions">

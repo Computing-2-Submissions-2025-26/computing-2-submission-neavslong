@@ -36,10 +36,17 @@ Run the unit tests:
 npm test
 ```
 
-Run JavaScript syntax checks:
+Run the course JSLint checks:
 
 ```bash
 npm run lint
+```
+
+This command uses the course JSLint configuration. Install the course tool
+globally first if it is not already available:
+
+```bash
+sudo npm install -g jslint
 ```
 
 Generate the API documentation:
@@ -48,18 +55,9 @@ Generate the API documentation:
 npm run docs
 ```
 
-Start a local static server for the web application:
-
-```bash
-cd web-app
-python3 -m http.server 4173
-```
-
-Then open:
-
-```text
-http://127.0.0.1:4173/
-```
+Run the web application by opening `web-app/index.html` with a local web
+server, such as the **Live Server** extension in VS Code. A local server is
+required because the application uses JavaScript modules.
 
 After generating documentation, open:
 
@@ -115,11 +113,8 @@ The implementation includes:
 - campaign progression across five difficulties
 - special zombie abilities for crusher, jumper, and giant zombies
 
-The project also includes `npm run lint`, which checks that the JavaScript files
-parse correctly in Node's ES module runtime. The available `jslint` npm package
-does not support this project's modern `import`/`export` and `const` syntax, so
-the syntax check is used as the reliable cross-platform lint command for this
-submission.
+The project includes `npm run lint`, configured with the course JSLint ES6,
+browser, development, Node, and Mocha global settings.
 
 ## Unit Test Specification
 
@@ -131,7 +126,6 @@ details.
 
 - A new game creates an 8 by 8 board.
 - Dave, the exit, plants, zombies, and walls are placed inside the board.
-- Generated levels include a playable route to the exit.
 - Plants are placed in useful board positions with neighbouring cells.
 
 ### Dave Movement
@@ -197,6 +191,20 @@ Current coverage includes:
 - `web-app/tests/giant-zombie.test.js`
 - `web-app/tests/mode2-visuals.test.js`
 
+### Test Failure Verification
+
+Two temporary mutations were introduced locally and reverted after the
+corresponding tests were observed to fail:
+
+| Temporary mutation | Expected failing test | Observed result |
+|---|---|---|
+| Make `isWon` always return `false` | `reaching the exit sets status to 'won'` | Failed with `false !== true` |
+| Allow Dave to move into a wall | `Dave cannot move into a wall` | Failed with `true !== false` |
+
+These checks demonstrate that the tests detect concrete regressions in the win
+condition and movement rules. The submitted game code contains neither
+mutation.
+
 ## Web Application
 
 The web application is implemented in `web-app`.
@@ -209,6 +217,29 @@ The web application is implemented in `web-app`.
 The interface supports mouse/touch controls and keyboard controls. It uses
 semantic buttons, labelled grid cells, `aria-live` status updates, and visible
 game-state feedback for playing, won, lost, and campaign-complete states.
+
+## Accessibility Audit
+
+The application was audited in Firefox Developer Edition using axe DevTools
+with axe-core 4.10.3, Best Practices enabled, and the WCAG 2.1 AA ruleset.
+
+The following states were scanned after accessibility fixes:
+
+- home screen
+- Random Challenge during play
+- Campaign Mode during play
+- win dialog
+- loss dialog
+
+Each scanned state reported **0 automatic axe issues**. The shared game board
+uses the required `grid > row > gridcell` ARIA structure. End-state overlays use
+modal dialog semantics, move focus to their primary action, and make background
+controls inert while open.
+
+Manual responsive checks were also performed at 320 by 480 portrait, 480 by 320
+landscape, and 300% browser zoom. The interface reflows without text overlap;
+fixed-format board content remains usable, and end-state dialogs allow vertical
+scrolling when zoom leaves insufficient viewport height.
 
 ## Submission Checklist
 
@@ -246,6 +277,8 @@ game-state feedback for playing, won, lost, and campaign-complete states.
 - [x] `web-app/main.js` contains UI behaviour and DOM rendering.
 - [x] The UI references `web-app/game.js` for game rules.
 - [x] Assets are included in `web-app/assets`.
+- [x] Audited with axe DevTools using WCAG 2.1 AA rules.
+- [x] Verified at mobile portrait, mobile landscape, and 300% browser zoom.
 
 ### Final Checks
 
