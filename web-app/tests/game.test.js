@@ -622,6 +622,29 @@ describe("zombie AI", function () {
         assert.equal(getStatus(next), "playing");
     });
 
+    it("a giant cannot cover the exit", function () {
+        const state = mkState({
+            rows: 8,
+            cols: 8,
+            dave: {row: 5, col: 2},
+            exit: {row: 3, col: 3},
+            zombies: [{
+                id: "z1",
+                row: 1,
+                col: 2,
+                ability: "giant",
+                size: 2
+            }]
+        });
+        const next = moveZombies(state);
+        const zombie = getZombies(next)[0];
+        assert.deepEqual(
+            {row: zombie.row, col: zombie.col},
+            {row: 1, col: 2}
+        );
+        assert.equal(getStatus(next), "playing");
+    });
+
     it("a crusher destroys a plant and stops for that turn", function () {
         const state = mkState({
             dave: {row: 6, col: 3},

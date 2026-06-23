@@ -149,7 +149,8 @@ details.
 ### Zombie Behaviour
 
 - Zombies move toward Dave when a closer legal cell is available.
-- Zombies do not move through walls, other zombies, or the exit.
+- Zombies do not move through walls, other zombies, or the exit, including
+  when a giant zombie's 2 by 2 footprint would cover the exit.
 - Normal zombies are destroyed when they move into plants.
 - Crusher zombies destroy a plant and stop for that turn.
 - Jumper zombies can leap over one plant once.
